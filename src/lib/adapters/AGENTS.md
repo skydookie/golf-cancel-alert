@@ -1,0 +1,43 @@
+# src/lib/adapters — 사이트-어댑터
+
+## 이 모듈이 책임지는 것
+
+특정 골프장 예약 사이트에 대한 로그인, 예약 가능 날짜 스캔, 날짜별 시간표 스캔, 딥링크
+생성 — 즉 "어떤 사이트를 어떻게 긁어오는가"에 대한 모든 지식.
+
+## 이 모듈이 책임지지 않는 것 (건드리지 말 것)
+
+- 관심조건 매칭, 슬롯 상태 diff, 알림 발송 판단 — 전부 `src/lib/matching.ts`와
+  `src/lib/scanCycle.ts`의 책임이다. 이 모듈의 파일에서 Prisma나 알림 발송 코드를 import하지
+  않는다.
+- 자격증명의 암/복호화 — `src/lib/crypto.ts`의 책임이다. 어댑터의 `login()`은 이미 평문으로
+  복호화된 아이디/비밀번호를 인자로 받는다(이 모듈 안에서 암호화 로직을 다시 구현하지 않음).
+- 어느 골프장을 감시할지 결정 — `registry.ts`가 아니라 호출부(`scanCycle.ts`)의 책임이다.
+
+## 반드시 지켜야 하는 것
+
+- 새 골프장을 추가할 때는 `types.ts`의 `SiteAdapter` 인터페이스를 구현하는 새 파일 하나를
+  추가하고, `registry.ts`의 `ADAPTERS` 맵과 `../facilities.ts`의 `FACILITIES` 배열에 각각
+  항목을 추가하는 것으로 끝나야 한다. 다른 파일(scanCycle.ts, matching.ts, API 라우트, 화면
+  컴포넌트)을 수정해야 한다면 인터페이스 설계가 새어나간 것이다.
+- `login()`은 실패 원인을 반드시 `LoginFailedError`(자격증명 자체의 문제 — 호출부가 계정을
+  `PAUSED_LOGIN_FAILED`로 바꾸는 신호)와 `TransientSiteError`(일시적 오류 — 호출부가 이번
+  사이클만 건너뛰는 신호)로 구분해서 던진다. 이 구분이 무너지면 무한 재시도로 인한 계정 잠김
+  방지 로직 전체가 무력화된다.
+- `scanDaySlots()`가 반환하는 배열에는 **지금 신청 가능한 슬롯만** 담는다(예약 완료된
+  시간대를 별도 필드로 표시해 포함하는 방식으로 바꾸지 말 것 — 상위 diff 로직이 "목록에
+  없음 = 신청 불가"를 전제로 만들어져 있다).
+
+## 현재 상태에 대한 특기 사항
+
+`laviebelle.ts`의 CSS 선택자와 로그인 경로/필드명은 스크린샷 기반 추정치이며, 실사이트
+HTML로 검증되지 않았다(`docs/tracking/findings.md` 참고). 이 파일을 수정할 때는 상단 주석의
+"⚠️" 경고를 먼저 읽는다.
+
+## 테스트 가이드
+
+- 순수 파싱 함수(`parseCalendarHtml`, `parseDaySlotsHtml`)는 `tests/adapters/`에서
+  `tests/fixtures/*.html`을 입력으로 테스트한다. 사이트 구조가 바뀌면 fixture와 선택자를
+  함께 갱신하고 테스트를 다시 통과시킨다.
+- `login()`/`scanBookableDates()`/`scanDaySlots()`의 실제 네트워크 호출은 이 프로젝트의
+  단위 테스트 범위 밖이다(실사이트 접근이 필요한 통합 테스트로 별도 취급).
