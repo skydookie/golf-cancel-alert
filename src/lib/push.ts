@@ -15,32 +15,21 @@ function ensureConfigured() {
   configured = true;
 }
 
-export interface SlotPushPayload {
-  facilityName: string;
-  date: string;
-  course: string;
-  time: string;
-  price: number | null;
-  deepLinkUrl: string;
+export interface PushMessage {
+  title: string;
+  body: string;
+  url: string;
 }
 
 /**
- * 알림 대상 User의 모든 등록된 기기(구독)에 웹푸시를 발송한다.
- * spec.md 규칙: 동시에 여러 슬롯이 새로 열려도 묶지 않고 각각 개별 발송한다 — 이 함수를
- * 슬롯 하나당 한 번씩 호출하는 것이 호출부(T8 감시 엔진)의 책임이다.
+ * 알림 대상 User의 모든 등록된 기기(구독)에 웹푸시를 발송하는 저수준 공용 함수.
  * 더 이상 유효하지 않은 구독(브라우저가 만료시킨 endpoint, 410/404 응답)은 자동으로 정리한다.
  */
-export async function sendSlotPushToUser(userId: string, payload: SlotPushPayload): Promise<void> {
+export async function sendPushToUser(userId: string, message: PushMessage): Promise<void> {
   ensureConfigured();
 
   const subscriptions = await prisma.pushSubscription.findMany({ where: { userId } });
-  const body = JSON.stringify({
-    title: "취소표 발생",
-    body: `${payload.facilityName} ${payload.date} ${payload.course} ${payload.time}${
-      payload.price != null ? ` · ${payload.price.toLocaleString()}원` : ""
-    }`,
-    url: payload.deepLinkUrl,
-  });
+  const body = JSON.stringify(message);
 
   await Promise.all(
     subscriptions.map(async (sub) => {
@@ -63,4 +52,36 @@ export async function sendSlotPushToUser(userId: string, payload: SlotPushPayloa
       }
     })
   );
+}
+
+export interface SlotPushPayload {
+  facilityName: string;
+  date: string;
+  course: string;
+  time: string;
+  price: number | null;
+  deepLinkUrl: string;
+}
+
+/**
+ * spec.md 규칙: 동시에 여러 슬롯이 새로 열려도 묶지 않고 각각 개별 발송한다 — 이 함수를
+ * 슬롯 하나당 한 번씩 호출하는 것이 호출부(T8 감시 엔진)의 책임이다.
+ */
+export async function sendSlotPushToUser(userId: string, payload: SlotPushPayload): Promise<void> {
+  await sendPushToUser(userId, {
+    title: "취소표 발생",
+    body: `${payload.facilityName} ${payload.date} ${payload.course} ${payload.time}${
+      payload.price != null ? ` · ${payload.price.toLocaleString()}원` : ""
+    }`,
+    url: payload.deepLinkUrl,
+  });
+}
+
+/** 골프장 계정 로그인 실패 시 즉시 사용자에게 알린다 — hard gate(handoff.md): 무한 재시도 금지. */
+export async function sendLoginFailureNotice(userId: string, facilityName: string): Promise<void> {
+  await sendPushToUser(userId, {
+    title: "골프장 계정 로그인 실패",
+    body: `${facilityName} 계정으로 자동 로그인에 실패해 감시를 일시중지했어요. 설정에서 계정 정보를 확인해주세요.`,
+    url: "/settings",
+  });
 }
