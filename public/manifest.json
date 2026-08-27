@@ -1,0 +1,13 @@
+{
+  "name": "골프 취소표 알림",
+  "short_name": "취소표 알림",
+  "description": "관심 날짜의 골프장 취소표를 자동으로 감시하고 알려주는 개인용 알림 도구",
+  "start_url": "/schedule",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
