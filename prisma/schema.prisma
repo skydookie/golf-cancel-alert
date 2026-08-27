@@ -1,0 +1,101 @@
+// 데이터 모델 (spec.md 도메인 모델 참고)
+//
+// 비밀번호 저장 방식은 두 가지로 나뉜다 — 절대 혼동하지 말 것:
+//   - User.passwordHash        : 단방향 해시 (bcrypt). 복원 불가능. 로그인 시 검증만 한다.
+//   - FacilityCredential.encryptedPassword : 가역 암호화 (AES-256-GCM). 백엔드가 골프장 사이트에
+//     자동 로그인할 때 복호화해서 실제로 써야 하므로 되돌릴 수 있어야 한다.
+// (loginId도 실명/전화번호 등 개인식별정보일 수 있어 같은 가역 암호화로 보호한다.)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  credentials   FacilityCredential[]
+  conditions    WatchCondition[]
+  slotStates    SlotObservationState[]
+  notifications NotificationLog[]
+  pushSubs      PushSubscription[]
+}
+
+enum CredentialStatus {
+  ACTIVE
+  PAUSED_LOGIN_FAILED
+}
+
+model FacilityCredential {
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facilityId        String // 예: "laviebelle-old", "laviebelle-new" — 사이트-어댑터 식별자
+  encryptedLoginId  String
+  encryptedPassword String
+  status            CredentialStatus  @default(ACTIVE)
+  lastError         String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([userId, facilityId])
+}
+
+model WatchCondition {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // 특정 날짜를 콕 찍어 지정 (YYYY-MM-DD 문자열 목록) — 기간/요일 패턴 아님 (spec.md 범위 밖)
+  dates     String[]
+  // "HH:mm" 24시간제
+  timeStart String
+  timeEnd   String
+  createdAt DateTime @default(now())
+}
+
+// (User, Facility, 날짜, 코스, 시간)별 마지막 관측 상태 — 전환(신청불가→신청가능) 감지용.
+// 회원 등급별로 보이는 잔여 시간표가 다를 수 있어 User마다 독립적으로 추적한다(공유하지 않음).
+model SlotObservationState {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facilityId String
+  date       String // YYYY-MM-DD
+  course     String // "OUT" | "IN" (사이트가 그렇게 부름)
+  time       String // "HH:mm"
+  isBookable Boolean
+  lastPrice  Int?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, facilityId, date, course, time])
+}
+
+model NotificationLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facilityId  String
+  date        String
+  course      String
+  time        String
+  price       Int?
+  deepLinkUrl String
+  createdAt   DateTime @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
