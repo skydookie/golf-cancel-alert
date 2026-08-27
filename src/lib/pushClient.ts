@@ -1,5 +1,5 @@
 // 브라우저에서 실행되는 웹푸시 구독 등록 로직. service worker(/sw.js) 등록 → 푸시 구독 생성 →
-// 서버에 저장(T7 /api/push/subscribe)까지 한 번에 처리한다.
+// 서버에 저장(/api/push/subscribe)까지 한 번에 처리한다.
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);

@@ -214,4 +214,70 @@ describe("runScanCycle", () => {
     expect(adapter.login).toHaveBeenNthCalledWith(1, "id-1", "pw-1");
     expect(adapter.login).toHaveBeenNthCalledWith(2, "id-2", "pw-2");
   });
+
+  it("로그인 이후 스캔 도중 한 계정이 실패해도, 그 계정만 건너뛰고 나머지 계정은 계속 스캔한다", async () => {
+    prismaMock.facilityCredential.findMany.mockResolvedValue([
+      baseCredential({ id: "cred1", userId: "u1", encryptedLoginId: "enc:id-1", encryptedPassword: "enc:pw-1" }),
+      baseCredential({ id: "cred2", userId: "u2", encryptedLoginId: "enc:id-2", encryptedPassword: "enc:pw-2" }),
+    ]);
+    prismaMock.watchCondition.findMany.mockResolvedValue([condition()]);
+    prismaMock.slotObservationState.findMany.mockResolvedValue([]);
+
+    const { TransientSiteError } = await import("@/lib/adapters/types");
+    let loginCallCount = 0;
+    const adapter = {
+      login: vi.fn().mockImplementation(() => {
+        loginCallCount += 1;
+        return Promise.resolve({ cookie: `session-${loginCallCount}` });
+      }),
+      // 첫 번째 계정(cred1)의 스캔 도중에만 실패 — 로그인 자체는 성공했지만 그 뒤 단계에서 터지는 경우
+      scanBookableDates: vi
+        .fn()
+        .mockImplementationOnce(() => Promise.reject(new TransientSiteError()))
+        .mockImplementationOnce(() => Promise.resolve(["2026-09-06"])),
+      scanDaySlots: vi
+        .fn()
+        .mockResolvedValue([{ facilityId: "laviebelle-old", date: "2026-09-06", course: "OUT", time: "07:26", price: 250000 }]),
+      buildDeepLink: vi.fn().mockReturnValue("https://example.com/deep-link"),
+    };
+    getAdapter.mockReturnValue(adapter);
+
+    const { runScanCycle } = await import("@/lib/scanCycle");
+    const summary = await runScanCycle();
+
+    // cred1은 실패로 세지고, cred2는 정상적으로 끝까지 처리되어 알림까지 나가야 한다.
+    expect(summary.transientFailures).toBe(1);
+    expect(summary.notificationsSent).toBe(1);
+    expect(adapter.login).toHaveBeenCalledTimes(2);
+    expect(sendSlotPushToUser).toHaveBeenCalledTimes(1);
+    expect(sendSlotPushToUser).toHaveBeenCalledWith("u2", expect.anything());
+  });
+
+  it("예상 못한 예외(버그 등)가 나도 전체 사이클이 죽지 않고, 그 계정만 건너뛴다", async () => {
+    prismaMock.facilityCredential.findMany.mockResolvedValue([
+      baseCredential({ id: "cred1", userId: "u1", encryptedLoginId: "enc:id-1", encryptedPassword: "enc:pw-1" }),
+      baseCredential({ id: "cred2", userId: "u2", encryptedLoginId: "enc:id-2", encryptedPassword: "enc:pw-2" }),
+    ]);
+    prismaMock.watchCondition.findMany.mockResolvedValue([condition()]);
+    prismaMock.slotObservationState.findMany.mockResolvedValue([]);
+
+    const adapter = {
+      login: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error("예상치 못한 버그");
+        })
+        .mockImplementationOnce(() => Promise.resolve({ cookie: "session-2" })),
+      scanBookableDates: vi.fn().mockResolvedValue([]),
+      scanDaySlots: vi.fn().mockResolvedValue([]),
+      buildDeepLink: vi.fn(),
+    };
+    getAdapter.mockReturnValue(adapter);
+
+    const { runScanCycle } = await import("@/lib/scanCycle");
+    const summary = await runScanCycle();
+
+    expect(summary.unexpectedFailures).toBe(1);
+    expect(adapter.login).toHaveBeenCalledTimes(2); // cred2도 시도됨 — 전체가 죽지 않음
+  });
 });

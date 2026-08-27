@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   }
   const { email, password, inviteCode } = parsed.data;
 
-  // 초대코드 없이는 가입 불가 — hard gate (handoff.md)
+  // 초대코드 없이는 가입 불가
   if (!isValidInviteCode(inviteCode)) {
     return jsonError("유효하지 않은 초대코드입니다.", 403);
   }

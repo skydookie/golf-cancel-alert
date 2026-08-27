@@ -64,8 +64,8 @@ export interface SlotPushPayload {
 }
 
 /**
- * spec.md 규칙: 동시에 여러 슬롯이 새로 열려도 묶지 않고 각각 개별 발송한다 — 이 함수를
- * 슬롯 하나당 한 번씩 호출하는 것이 호출부(T8 감시 엔진)의 책임이다.
+ * 동시에 여러 슬롯이 새로 열려도 묶지 않고 각각 개별 발송한다 — 이 함수를 슬롯 하나당 한 번씩
+ * 호출하는 것이 호출부(scanCycle.ts의 감시 엔진)의 책임이다.
  */
 export async function sendSlotPushToUser(userId: string, payload: SlotPushPayload): Promise<void> {
   await sendPushToUser(userId, {
@@ -77,7 +77,7 @@ export async function sendSlotPushToUser(userId: string, payload: SlotPushPayloa
   });
 }
 
-/** 골프장 계정 로그인 실패 시 즉시 사용자에게 알린다 — hard gate(handoff.md): 무한 재시도 금지. */
+/** 골프장 계정 로그인 실패 시 즉시 사용자에게 알린다 — 그 계정에 대한 무한 재시도는 하지 않는다. */
 export async function sendLoginFailureNotice(userId: string, facilityName: string): Promise<void> {
   await sendPushToUser(userId, {
     title: "골프장 계정 로그인 실패",

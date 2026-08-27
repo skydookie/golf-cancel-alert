@@ -1,4 +1,4 @@
-// 데이터 모델 (spec.md 도메인 모델 참고)
+// 데이터 모델
 //
 // 비밀번호 저장 방식은 두 가지로 나뉜다 — 절대 혼동하지 말 것:
 //   - User.passwordHash        : 단방향 해시 (bcrypt). 복원 불가능. 로그인 시 검증만 한다.
@@ -52,7 +52,7 @@ model WatchCondition {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // 특정 날짜를 콕 찍어 지정 (YYYY-MM-DD 문자열 목록) — 기간/요일 패턴 아님 (spec.md 범위 밖)
+  // 특정 날짜를 콕 찍어 지정 (YYYY-MM-DD 문자열 목록) — 기간/요일 패턴 입력은 범위 밖
   dates     String[]
   // "HH:mm" 24시간제
   timeStart String

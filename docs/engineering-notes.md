@@ -47,8 +47,7 @@ PushSubscription을 전부 지워야 한다는 요건은, 애플리케이션 코
 (`id`/`pwd`)은 사용자가 캡처해준 화면 **스크린샷**(HTML 소스 아님)을 근거로 만든 합리적
 추정치다. `parseCalendarHtml`/`parseDaySlotsHtml`은 자체 fixture(`tests/fixtures/`)로는
 전부 통과하지만, 그 fixture 자체가 추정 구조로 만들어졌으므로 실사이트 검증이 아니다.
-배포 전 실제 사이트의 개발자도구로 확인 후 선택자를 맞춰야 한다(자세한 내용은
-`docs/tracking/findings.md`).
+배포 전 실제 사이트의 개발자도구로 확인 후 선택자를 맞춰야 한다.
 
 ## Vercel 무료 티어는 자체 Cron이 하루 1회로 제한된다
 

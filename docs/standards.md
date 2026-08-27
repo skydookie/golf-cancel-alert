@@ -53,9 +53,8 @@
   PostgreSQL 없이 `npm test`가 통과해야 함). 실제 DB가 필요한 마이그레이션 자체의 검증은
   이 테스트 스위트의 범위 밖이다.
 - `src/lib/adapters/laviebelle.ts`의 HTML 파서는 `tests/fixtures/laviebelle-*.html`을 입력으로
-  테스트한다. 이 fixture는 **실제 사이트 HTML로 아직 검증되지 않은 추정 구조**다
-  (`docs/tracking/findings.md` 참고) — 실사이트 구조를 확인하면 fixture와 파서 선택자를 함께
-  갱신해야 한다.
+  테스트한다. 이 fixture는 **실제 사이트 HTML로 아직 검증되지 않은 추정 구조**다 — 실사이트
+  구조를 확인하면 fixture와 파서 선택자를 함께 갱신해야 한다.
 
 ## 모듈 경계
 

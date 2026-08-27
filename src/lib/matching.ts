@@ -1,8 +1,8 @@
 import type { AvailableSlot } from "@/lib/adapters/types";
 
 // ── 순수 로직: 전 관측 상태 vs 새 스캔 결과를 비교해 전환을 찾는다 ──────────────
-// spec.md 규칙: "신청 불가 → 신청 가능"으로 전환된 시점에만 알림 대상. 이미 열려있던 건
-// 재알림하지 않는다. "신청 가능 → 신청 불가 → 다시 신청 가능"으로 재전환되면 새 알림 대상.
+// "신청 불가 → 신청 가능"으로 전환된 시점에만 알림 대상. 이미 열려있던 건 재알림하지 않는다.
+// "신청 가능 → 신청 불가 → 다시 신청 가능"으로 재전환되면 새 알림 대상.
 // 식별 키 = (날짜, 코스, 시간) — 요금은 식별에 포함하지 않는다.
 
 export interface KnownSlotState {
@@ -73,7 +73,7 @@ export interface WatchConditionLike {
   timeEnd: string;
 }
 
-/** 코스는 구분하지 않는다(spec.md) — 날짜가 목록에 있고 시간이 범위 안이면 매칭. */
+/** 코스는 구분하지 않는다 — 날짜가 목록에 있고 시간이 범위 안이면 매칭. */
 export function matchesCondition(
   slot: { date: string; time: string },
   condition: WatchConditionLike
