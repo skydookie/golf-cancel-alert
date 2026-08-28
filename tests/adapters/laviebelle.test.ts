@@ -9,10 +9,10 @@ import {
   nextYyyymm,
 } from "@/lib/adapters/laviebelle";
 
-// ⚠️ laviebelle-calendar.html / laviebelle-day.html은 실제 사이트 HTML이 아니라 스크린샷 기반
-// 추정 구조다 — 파일 상단 주석과 src/lib/adapters/laviebelle.ts 상단 주석 참고. AJAX 응답
-// 조각의 실제 구조가 확인되면 fixture와 파서 선택자를 함께 갱신해야 한다.
-// laviebelle-reservation-shell.html은 반대로 실제 캡처본이다 — extractShellContext 테스트 참고.
+// ⚠️ laviebelle-calendar.html은 실제 사이트 HTML이 아니라 스크린샷 기반 추정 구조다 — 파일
+// 상단 주석과 src/lib/adapters/laviebelle.ts 상단 주석 참고. 달력 AJAX 응답의 실제 구조가
+// 확인되면 fixture와 parseCalendarHtml의 선택자를 함께 갱신해야 한다.
+// laviebelle-day.html / laviebelle-reservation-shell.html은 반대로 실제 캡처본이다.
 
 function fixture(name: string): string {
   return readFileSync(join(__dirname, "..", "fixtures", name), "utf-8");
@@ -33,18 +33,22 @@ describe("parseCalendarHtml", () => {
   });
 });
 
-describe("parseDaySlotsHtml", () => {
-  it("신청 버튼이 있는 행만 슬롯으로 파싱한다", () => {
+describe("parseDaySlotsHtml (실제 캡처본 fixture 사용)", () => {
+  it("신청 링크(id=timeresbtn_*)가 있는 행만 슬롯으로 파싱하고, 요금은 셀 텍스트가 아니라 신청 링크의 할인가 인자에서 뽑는다", () => {
     const slots = parseDaySlotsHtml(fixture("laviebelle-day.html"), "2026-08-29");
     expect(slots).toEqual([
-      { facilityId: "laviebelle-old", date: "2026-08-29", course: "OUT", time: "07:26", price: 250000 },
-      { facilityId: "laviebelle-old", date: "2026-08-29", course: "OUT", time: "12:46", price: 250000 },
-      { facilityId: "laviebelle-old", date: "2026-08-29", course: "IN", time: "13:42", price: 250000 },
+      { facilityId: "laviebelle-old", date: "2026-08-29", course: "OUT", time: "11:43", price: 230000 },
+      { facilityId: "laviebelle-old", date: "2026-08-29", course: "IN", time: "13:42", price: 230000 },
     ]);
   });
 
+  it("헤더 행(<th>만 있음)은 자연히 걸러진다", () => {
+    const headerOnlyHtml = `<table><tbody><tr><th>번호</th><th>코스</th><th>시간</th><th>일반요금</th><th>예약</th></tr></tbody></table>`;
+    expect(parseDaySlotsHtml(headerOnlyHtml, "2026-08-30")).toEqual([]);
+  });
+
   it("신청 버튼이 없는 행(예약 완료분)은 애초에 표에 없다는 전제를 반영해, 빈 표는 빈 배열을 준다", () => {
-    const emptyHtml = `<table class="gres-time-table"><tbody></tbody></table>`;
+    const emptyHtml = `<table><tbody></tbody></table>`;
     expect(parseDaySlotsHtml(emptyHtml, "2026-08-30")).toEqual([]);
   });
 });

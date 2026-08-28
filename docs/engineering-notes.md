@@ -45,13 +45,22 @@ PushSubscription을 전부 지워야 한다는 요건은, 애플리케이션 코
 `real_reservation.asp`를 GET하면 달력·시간표 데이터가 없는 빈 껍데기만 온다 — 실제 데이터는
 페이지 로드시 인라인 스크립트가 jQuery AJAX POST로 별도 엔드포인트
 (`real_calendar_ajax_view.asp`, `real_timeinfo_ajax_from.asp`)를 호출해 그 응답 HTML을
-화면에 끼워 넣는 방식이다. 사용자가 제공한 실제 페이지 소스로 이 구조와 로그인 폼 필드명
-(`mem_id`/`usr_pwd`, `login_ok.asp`)을 확인해 `src/lib/adapters/laviebelle.ts`에 반영했다.
-반면 그 AJAX 응답 자체의 HTML 구조(`.gres-calendar-month`, `td.gres-day--bookable`,
-`table.gres-time-table` 등 `parseCalendarHtml`/`parseDaySlotsHtml`의 선택자)는 여전히
-스크린샷 기반 추정치다 — "페이지 소스 보기"로는 최초 로드 HTML만 보이고 AJAX 응답은
-개발자도구 Network 탭에서 실제 요청을 관찰해야 확인할 수 있기 때문이다. 배포 전 실제 AJAX
+화면에 끼워 넣는 방식이다. 사용자가 제공한 실제 페이지 소스/화면 캡처로 이 구조, 로그인 폼
+필드명(`mem_id`/`usr_pwd`, `login_ok.asp`), 그리고 시간표 AJAX 응답 조각의 실제 마크업
+(`parseDaySlotsHtml`)까지 확인해 `src/lib/adapters/laviebelle.ts`에 반영했다. 반면 달력
+AJAX 응답 자체의 HTML 구조(`parseCalendarHtml`의 선택자)는 여전히 스크린샷 기반 추정치다 —
+"페이지 소스 보기"로는 최초 로드 HTML만 보이고, AJAX가 채워 넣는 실제 화면 요소는 개발자도구
+Elements/Network에서 화면을 직접 조작해야 확인할 수 있기 때문이다. 배포 전 실제 달력 AJAX
 응답을 확인해 선택자를 맞춰야 한다.
+
+## 라비에벨 시간표에 보이는 요금은 "정가"이고, 실제 결제 요금은 신청 버튼의 onclick 인자에만 있다
+
+`real_timeinfo_ajax_from.asp` 응답의 요금 셀(`<td class="cm_wjdtkddyrma">`)에는 취소선
+처리하려던 정가만 들어 있고(사이트 쪽 `_style` 오타로 취소선 자체는 렌더링 안 됨), 회원이
+실제로 결제할 할인가는 신청 링크의 `href="javascript:subcmd('R', ..., greenfee_base,
+greenfee_dis, ...)"` 호출 인자 중 `greenfee_dis`에만 있다(사용자가 캡처해준 실제 응답으로
+확인됨: 정가 250,000 vs 실제 230,000). `parseDaySlotsHtml`이 셀 텍스트 대신 이 인자를
+우선 파싱하는 이유이자, 새 fixture로 바꿀 때 같이 잃어버리기 쉬운 함정이다.
 
 ## Vercel 무료 티어는 자체 Cron이 하루 1회로 제한된다
 

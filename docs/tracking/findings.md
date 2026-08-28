@@ -1,30 +1,32 @@
 # findings.md — 미해결 문제
 
-## 라비에벨 사이트의 AJAX 응답 조각 HTML 구조가 검증되지 않음
+## 라비에벨 달력 AJAX 응답 조각 HTML 구조와 날짜별 openyn/dategbn 값이 검증되지 않음
 
-**증상**: 사용자가 예약 캘린더 화면(로그인 전 상태)의 실제 페이지 소스를 제공해, 로그인
-폼(`mem_id`/`usr_pwd`, `/oldcourse/_mobile/login/login_ok.asp`)과 "셸 페이지 GET → AJAX
-엔드포인트(`real_calendar_ajax_view.asp`, `real_timeinfo_ajax_from.asp`) POST" 2단계 구조는
-확인되어 `src/lib/adapters/laviebelle.ts`에 반영했다. 하지만 그 AJAX 엔드포인트가 실제로
-돌려주는 **응답 HTML 조각**(달력 셀의 예약가능/마감 표시 태그·클래스, 시간표 행의
-코스/시간/요금/신청버튼 마크업)은 이번 캡처에 포함되지 않아 `parseCalendarHtml`/
-`parseDaySlotsHtml`의 선택자는 여전히 스크린샷 기반 추정치다. 또한 날짜별 시간표 조회에
+**증상**: 사용자가 실제 화면 캡처를 단계적으로 제공해, 로그인 폼(`mem_id`/`usr_pwd`,
+`/oldcourse/_mobile/login/login_ok.asp`), "셸 페이지 GET → AJAX 엔드포인트
+(`real_calendar_ajax_view.asp`, `real_timeinfo_ajax_from.asp`) POST" 2단계 구조, 그리고
+**날짜별 시간표 AJAX 응답 조각의 실제 마크업**(`parseDaySlotsHtml`의 선택자 — `<td>` 순서,
+`id="timeresbtn_*"` 신청 링크, 셀에 보이는 요금은 정가이고 실제 결제 요금은 신청 링크의
+`subcmd(...)` 호출 인자 중 `greenfee_dis`에 있다는 것)까지 확인되어
+`src/lib/adapters/laviebelle.ts`에 반영했다. 다만 **달력** AJAX 엔드포인트가 실제로 돌려주는
+응답 HTML 조각(날짜 셀의 예약가능/마감 표시 태그·클래스)은 아직 확보되지 않아
+`parseCalendarHtml`의 선택자는 여전히 스크린샷 기반 추정치다. 또한 날짜별 시간표 조회에
 필요한 `openyn`/`dategbn` 값을 날짜마다 어떻게 알아내는지도 미확인이라, 지금은 "오늘" 날짜의
 기본값(`openyn=1`, `dategbn=6`)을 모든 날짜에 재사용하는 임시 대응이다.
 **왜 지금 못 고치나**: "페이지 소스 보기"로는 최초 로드된 셸 HTML만 보이고, jQuery가 이후
-호출하는 AJAX 응답은 브라우저 개발자도구의 Network 탭에서 실제 요청을 관찰해야만 확인할 수
-있다 — 코드만 읽어서는 해결할 수 없는 외부 의존 정보다.
-**영향 범위**: 응답 조각 구조가 여기서 가정한 것과 다르면 `scanBookableDates`/`scanDaySlots`가
-빈 배열을 반환해, 감시 기능 전체가 조용히 아무 취소표도 못 찾을 수 있다. `openyn`/`dategbn`
-기본값이 날짜마다 실제로 다르면 오늘이 아닌 날짜의 시간표 조회가 항상 빈 결과를 반환할 수
-있다. 로그인 성공/실패 신호(리다이렉트/쿠키)를 가정과 다르게 처리하면 매 사이클
-`LoginFailedError`로 계정이 잠길 수도 있다.
-**접근 방향**: 사용자가 로그인 상태로 개발자도구 Network 탭을 열어 (1) 캘린더 화면 로드 시
-`real_calendar_ajax_view.asp` 응답 HTML, (2) 달력에서 임의의 날짜를 클릭했을 때
-`real_timeinfo_ajax_from.asp` 요청의 실제 `openyn`/`dategbn` 값과 응답 HTML을 확보해주면,
-`parseCalendarHtml`/`parseDaySlotsHtml`의 선택자와 `scanDaySlots`의 날짜별 파라미터 결정
-로직을 그에 맞게 수정하고 `tests/fixtures/laviebelle-*.html`도 실제 구조를 반영하도록
-교체한다.
+호출하는 AJAX 응답은 브라우저 개발자도구(Elements의 outerHTML 복사 또는 Network 탭)에서
+실제 화면을 조작해야만 확인할 수 있다 — 코드만 읽어서는 해결할 수 없는 외부 의존 정보이며,
+달력 조각은 아직 그 캡처가 이뤄지지 않았다.
+**영향 범위**: 달력 응답 조각 구조가 여기서 가정한 것과 다르면 `scanBookableDates`가 빈
+배열을 반환해, 감시 기능 전체가 조용히 아무 날짜도 못 찾을 수 있다. `openyn`/`dategbn`
+기본값이 날짜마다 실제로 다르면 오늘이 아닌 날짜의 시간표 조회(`scanDaySlots`)가 항상 빈
+결과를 반환할 수 있다. 로그인 성공/실패 신호(리다이렉트/쿠키)를 가정과 다르게 처리하면 매
+사이클 `LoginFailedError`로 계정이 잠길 수도 있다.
+**접근 방향**: 사용자가 로그인 상태로 개발자도구에서 (1) 달력 화면의 날짜 셀들을 감싸는
+`<table>`(또는 그 이상)의 outerHTML, (2) 달력에서 예약 가능한 날짜와 마감/오픈전 날짜를 각각
+클릭했을 때 `timefrom_change`에 실제로 전달되는 `openyn`/`dategbn` 값을 확보해주면,
+`parseCalendarHtml`의 선택자와 `scanDaySlots`의 날짜별 파라미터 결정 로직을 그에 맞게
+수정하고 `tests/fixtures/laviebelle-calendar.html`도 실제 구조를 반영하도록 교체한다.
 
 ## 뉴코스(`laviebelle-new`)의 존재 여부와 구조가 확인되지 않음
 

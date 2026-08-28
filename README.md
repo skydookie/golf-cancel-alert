@@ -40,22 +40,22 @@ npm run dev
 
 ## 실사이트 연동 전 반드시 확인해야 하는 것 (중요)
 
-`src/lib/adapters/laviebelle.ts` 상단 주석 참고. 실제 예약 화면(로그인 전 상태) 페이지 소스로
-로그인 폼 필드명(`mem_id`/`usr_pwd`, `/oldcourse/_mobile/login/login_ok.asp`)과 "셸 페이지
-GET → AJAX 엔드포인트 POST" 2단계 구조는 확인해서 반영했지만, AJAX 엔드포인트가 실제로
-돌려주는 응답 HTML *조각*의 구조와 로그인 성공/실패 신호 방식은 아직 스크린샷 기반
+`src/lib/adapters/laviebelle.ts` 상단 주석 참고. 실제 화면 캡처로 로그인 폼 필드명
+(`mem_id`/`usr_pwd`, `/oldcourse/_mobile/login/login_ok.asp`), "셸 페이지 GET → AJAX
+엔드포인트 POST" 2단계 구조, 날짜별 시간표 AJAX 응답 조각의 실제 마크업(`parseDaySlotsHtml`,
+요금은 셀 텍스트가 아니라 신청 링크의 할인가 인자에서 뽑아야 함)까지는 확인해서 반영했지만,
+**달력** AJAX 응답 조각의 구조와 로그인 성공/실패 신호 방식은 아직 스크린샷 기반
 추정치입니다. 배포 전에 반드시:
 
-1. 라비에벨 사이트에 로그인한 상태로 브라우저 개발자도구 Network 탭을 열어(페이지 소스
-   보기로는 안 보임) 예약 캘린더 화면 로드 시 `real_calendar_ajax_view.asp` 응답 HTML과,
-   달력에서 날짜를 클릭했을 때 `real_timeinfo_ajax_from.asp` 요청의 실제 `openyn`/`dategbn`
-   값·응답 HTML을 확인한다.
-2. `parseCalendarHtml` / `parseDaySlotsHtml`의 선택자(`.gres-calendar-month`,
-   `td.gres-day--bookable` 등)와 `scanDaySlots`의 `openyn`/`dategbn` 기본값을 실제 구조에
-   맞게 수정한다.
+1. 라비에벨 사이트에 로그인한 상태로 개발자도구를 열어(페이지 소스 보기로는 안 보임) 예약
+   캘린더 화면의 날짜 셀들을 감싸는 `<table>`(또는 그 이상)을 검사(Inspect) → outerHTML을
+   복사해 확인한다. 예약 가능한 날짜와 마감/오픈전 날짜를 각각 클릭했을 때
+   `timefrom_change`에 실제로 전달되는 `openyn`/`dategbn` 값도 함께 확인한다.
+2. `parseCalendarHtml`의 선택자(`.gres-calendar-month`, `td.gres-day--bookable` 등)와
+   `scanDaySlots`의 `openyn`/`dategbn` 기본값을 실제 구조에 맞게 수정한다.
 3. 로그인 성공/실패 시 `login_ok.asp`가 실제로 어떻게 응답하는지(리다이렉트 위치, 쿠키 유무
    등) 확인해 `login()`의 판별 조건을 맞춘다.
-4. `tests/fixtures/laviebelle-*.html`을 실제 구조를 반영한 fixture로 교체하고
+4. `tests/fixtures/laviebelle-calendar.html`을 실제 구조를 반영한 fixture로 교체하고
    `npm test`로 재검증한다.
 
 뉴코스(`laviebelle-new`) 지원 여부와, 취소표 클릭 시 날짜별 화면으로 직접 연결되는 딥링크가
