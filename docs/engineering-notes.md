@@ -40,14 +40,18 @@ PushSubscription을 전부 지워야 한다는 요건은, 애플리케이션 코
 옮기면 이 API가 없을 수 있으니, 어댑터를 Edge Runtime에 올리려면 먼저 이 부분을 확인해야
 한다.
 
-## 라비에벨 어댑터는 실사이트 HTML로 검증되지 않은 추정 구조다
+## 라비에벨 예약 화면은 셸 페이지 + AJAX 프래그먼트 조합이라 단순 GET 스크레이핑이 안 된다
 
-`src/lib/adapters/laviebelle.ts`의 CSS 선택자(`.gres-calendar-month`,
-`td.gres-day--bookable`, `table.gres-time-table` 등)와 로그인 경로(`LOGIN_PATH`)/필드명
-(`id`/`pwd`)은 사용자가 캡처해준 화면 **스크린샷**(HTML 소스 아님)을 근거로 만든 합리적
-추정치다. `parseCalendarHtml`/`parseDaySlotsHtml`은 자체 fixture(`tests/fixtures/`)로는
-전부 통과하지만, 그 fixture 자체가 추정 구조로 만들어졌으므로 실사이트 검증이 아니다.
-배포 전 실제 사이트의 개발자도구로 확인 후 선택자를 맞춰야 한다.
+`real_reservation.asp`를 GET하면 달력·시간표 데이터가 없는 빈 껍데기만 온다 — 실제 데이터는
+페이지 로드시 인라인 스크립트가 jQuery AJAX POST로 별도 엔드포인트
+(`real_calendar_ajax_view.asp`, `real_timeinfo_ajax_from.asp`)를 호출해 그 응답 HTML을
+화면에 끼워 넣는 방식이다. 사용자가 제공한 실제 페이지 소스로 이 구조와 로그인 폼 필드명
+(`mem_id`/`usr_pwd`, `login_ok.asp`)을 확인해 `src/lib/adapters/laviebelle.ts`에 반영했다.
+반면 그 AJAX 응답 자체의 HTML 구조(`.gres-calendar-month`, `td.gres-day--bookable`,
+`table.gres-time-table` 등 `parseCalendarHtml`/`parseDaySlotsHtml`의 선택자)는 여전히
+스크린샷 기반 추정치다 — "페이지 소스 보기"로는 최초 로드 HTML만 보이고 AJAX 응답은
+개발자도구 Network 탭에서 실제 요청을 관찰해야 확인할 수 있기 때문이다. 배포 전 실제 AJAX
+응답을 확인해 선택자를 맞춰야 한다.
 
 ## Vercel 무료 티어는 자체 Cron이 하루 1회로 제한된다
 

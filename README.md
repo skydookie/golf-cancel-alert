@@ -2,7 +2,7 @@
 
 라비에벨 골프장 예약 사이트를 자동으로 감시해서, 등록해둔 관심 날짜/시간대에 취소표가 새로
 열리면 웹 푸시로 알려주고, 앱 화면에서 바로 확인해 원클릭으로 사이트에 넘어가 예약을 마무리할 수
-있는 개인용 PWA입니다. 실제 명세는 `.dryforge/` 아카이브(`NNN/`)를 참고하세요.
+있는 개인용 PWA입니다. 자동 예약은 하지 않습니다.
 
 ## 스택
 
@@ -40,21 +40,26 @@ npm run dev
 
 ## 실사이트 연동 전 반드시 확인해야 하는 것 (중요)
 
-`src/lib/adapters/laviebelle.ts` 상단 주석 참고 — 이 어댑터의 HTML 파싱 선택자와 로그인
-경로/필드명은 **실제 사이트 화면 캡처(스크린샷)만으로 추정**해서 만든 것이라, 실사이트의 진짜
-HTML 구조로 검증되지 않았습니다. 배포 전에 반드시:
+`src/lib/adapters/laviebelle.ts` 상단 주석 참고. 실제 예약 화면(로그인 전 상태) 페이지 소스로
+로그인 폼 필드명(`mem_id`/`usr_pwd`, `/oldcourse/_mobile/login/login_ok.asp`)과 "셸 페이지
+GET → AJAX 엔드포인트 POST" 2단계 구조는 확인해서 반영했지만, AJAX 엔드포인트가 실제로
+돌려주는 응답 HTML *조각*의 구조와 로그인 성공/실패 신호 방식은 아직 스크린샷 기반
+추정치입니다. 배포 전에 반드시:
 
-1. 라비에벨 사이트에 로그인해서 예약 캘린더 화면과 날짜별 시간표 화면의 실제 HTML(브라우저
-   개발자도구 → Elements/페이지 소스 보기)을 확인한다.
+1. 라비에벨 사이트에 로그인한 상태로 브라우저 개발자도구 Network 탭을 열어(페이지 소스
+   보기로는 안 보임) 예약 캘린더 화면 로드 시 `real_calendar_ajax_view.asp` 응답 HTML과,
+   달력에서 날짜를 클릭했을 때 `real_timeinfo_ajax_from.asp` 요청의 실제 `openyn`/`dategbn`
+   값·응답 HTML을 확인한다.
 2. `parseCalendarHtml` / `parseDaySlotsHtml`의 선택자(`.gres-calendar-month`,
-   `td.gres-day--bookable` 등)를 실제 클래스명/구조에 맞게 수정한다.
-3. `login()`의 `LOGIN_PATH`와 폼 필드명(`id` / `pwd`)을 실제 로그인 폼 구조에 맞게 수정한다.
+   `td.gres-day--bookable` 등)와 `scanDaySlots`의 `openyn`/`dategbn` 기본값을 실제 구조에
+   맞게 수정한다.
+3. 로그인 성공/실패 시 `login_ok.asp`가 실제로 어떻게 응답하는지(리다이렉트 위치, 쿠키 유무
+   등) 확인해 `login()`의 판별 조건을 맞춘다.
 4. `tests/fixtures/laviebelle-*.html`을 실제 구조를 반영한 fixture로 교체하고
    `npm test`로 재검증한다.
 
 뉴코스(`laviebelle-new`) 지원 여부와, 취소표 클릭 시 날짜별 화면으로 직접 연결되는 딥링크가
-가능한지도 같은 방식으로 실사이트에서 확인이 필요합니다(각각 `src/lib/adapters/laviebelle.ts`,
-`src/lib/adapters/registry.ts`의 관련 주석 참고).
+가능한지도 같은 방식으로 실사이트에서 확인이 필요합니다.
 
 ## PWA 아이콘
 

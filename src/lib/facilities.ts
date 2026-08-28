@@ -8,7 +8,8 @@ export interface FacilityMeta {
 
 export const FACILITIES: FacilityMeta[] = [
   { id: "laviebelle-old", name: "라비에벨 올드코스" },
-  // "laviebelle-new"는 T3에서 실사이트 조사 결과에 따라 추가된다(구조가 다르면 별도 어댑터로).
+  // "laviebelle-new"(뉴코스)는 실사이트 조사로 존재/구조가 확인되면 추가한다(구조가 다르면
+  // 별도 어댑터로).
 ];
 
 export const FACILITY_IDS = FACILITIES.map((f) => f.id);

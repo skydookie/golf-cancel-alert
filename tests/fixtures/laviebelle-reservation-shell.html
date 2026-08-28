@@ -1,0 +1,123 @@
+<!--
+  실제 사이트에서 캡처한 HTML(2026-08-28, 로그인 전 상태, "페이지 소스 보기"로 확보).
+  src/lib/adapters/laviebelle.ts 상단 주석 참고 — 이 파일은 real_reservation.asp가 반환하는
+  "셸" 페이지 그대로다. 달력/시간표 데이터 자체는 이 안에 없고(AJAX로 별도 로드), 로그인 폼과
+  숨은 폼(#listform_calender 등)만 실사이트 구조로 검증됐다.
+-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=euc-kr" />
+    <title>라비에벨 컨트리클럽</title>
+
+<script language="JavaScript" type="text/JavaScript">
+<!--
+    calendar_change('202607','202608','202609','20260828');
+    default_subcmd ('T', '20260828', '1', '6');
+//-->
+</script>
+
+<form name="chang_calender" id="chang_calender" method="post">
+    <input type="hidden" id="chang_prevDate" name="prevDate">
+    <input type="hidden" id="chang_nowDate" name="nowDate">
+    <input type="hidden" id="chang_nextDate" name="nextDate">
+</form>
+
+<form name="listform_calender" id="listform_calender" method="post">
+    <input type="hidden" id="golfrestype" name="golfrestype" value="real">
+    <input type="hidden" id="schDate" name="schDate" value="202608">
+    <input type="hidden" id="usrmemcd" name="usrmemcd" value="10">
+    <input type="hidden" id="toDay" name="toDay" value="20260828">
+    <input type="hidden" id="calnum" name="calnum">
+</form>
+
+<form name="listform_timeform" id="listform_timeform" method="post" >
+    <input type="hidden" id="time_golfrestype" name="golfrestype" value="real">
+    <input type="hidden" id="time_courseid" name="courseid" value="0">
+    <input type="hidden" id="time_usrmemcd" name="usrmemcd" value="10">
+    <input type="hidden" id="time_pointdate" name="pointdate" value="20260828">
+    <input type="hidden" id="time_openyn" name="openyn" value="1">
+    <input type="hidden" id="time_dategbn" name="dategbn" value="6">
+    <input type="hidden" id="time_choice_time" name="choice_time" value="00">
+    <input type="hidden" id="time_cssncourseum" name="cssncourseum">
+    <input type="hidden" id="time_pointdate_chk" name="pointdatechk" value="">
+    <input type="hidden" name="inputtype" value="I">
+</form>
+
+<form name="inputform" id="inputform" method="post">
+    <input type="hidden" id="input_backurl" name="backurl" value="/oldcourse/_mobile/GolfRes/onepage/real_reservation.asp?">
+    <input type="hidden" id="input_pointdate" name="pointdate" value="20260828">
+    <input type="hidden" id="input_openyn" name="openyn">
+    <input type="hidden" id="input_dategbn" name="dategbn">
+    <input type="hidden" id="input_settype" name="settype">
+</form>
+
+</head>
+
+<body>
+
+<div id="wrap" class="sub">
+    <div class="quick_menu">
+        <div class="login">
+            <form name="frmQuickLogin" id="frmQuickLogin" method="POST" action="/oldcourse/_mobile/login/login_ok.asp">
+                <input type="text" name="mem_id" id="quick_id" title="" placeholder="아이디 or 휴대폰번호" class="inp01" />
+                <input type="password" name="usr_pwd" id="quick_pw" title="" placeholder="패스워드" class="inp01" />
+                <ul class="login_quick">
+                    <li><a href="#" class="bt_mlogin01" onClick="javascript:chkLogValue('frmQuickLogin','in','quick_id','quick_pw')">로그인</a></li>
+                    <li><a href="/oldcourse/_mobile/memberInfor/step_Agree.asp" class="bt_mlogin02">고객가입</a></li>
+                </ul>
+            </form>
+        </div>
+    </div>
+
+    <div id="content_body" class="clear">
+        <div id="cm_orange">
+            <div id="cm_reservation">
+                <div id="cm_body">
+                    <div id="cm_reservation_total" class="clear">
+                        <div id="cm_reservation_01">
+                            <div id="cm_calendar">
+                                <div class="cm_calendar_main_title">
+                                    <div class="cm_side clear">
+                                        <!--
+                                        <div class="cm_navi_open clear">
+                                            <div class="cm_ico"></div>
+                                            <div class="cm_txt">오픈전</div>
+                                        </div>
+                                        -->
+                                        <div class="cm_navi_liv clear">
+                                            <div class="cm_ico"></div>
+                                            <div class="cm_txt">예약</div>
+                                        </div>
+                                        <div class="cm_navi_end clear">
+                                            <div class="cm_ico"></div>
+                                            <div class="cm_txt">마감</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="cm_calendar_small">
+                                    <div id="cm_calendar_small_total" class="clear">
+                                        <div id="cm_calendar_small_01">
+                                            <div id="calendar_view_ajax_1"></div>
+                                        </div>
+                                        <div id="cm_calendar_small_02">
+                                            <div id="calendar_view_ajax_2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="cm_reservation_02">
+                            <div id="cm_time">
+                                <div id="input_ajax"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

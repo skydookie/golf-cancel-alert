@@ -3,27 +3,53 @@ import type { AvailableSlot, SiteAdapter, SiteSession } from "@/lib/adapters/typ
 import { LoginFailedError, TransientSiteError } from "@/lib/adapters/types";
 
 // ─────────────────────────────────────────────────────────────────────────
-// 라비에벨 골드코스 사이트-어댑터
+// 라비에벨 올드코스 사이트-어댑터
 //
-// 파싱 대상 화면 두 개는 실제 사용자가 로그인해서 캡처해준 스크린샷을 근거로 만들었다:
-//   1) 예약 캘린더: /oldcourse/_mobile/GolfRes/onepage/real_reservation.asp
-//      — 월별 달력에 "예약"(신청 가능한 시간대가 있음) / "마감" / "오픈전" 이 다른 색으로 표시.
-//   2) 날짜별 시간표: 캘린더에서 날짜를 클릭하면 같은 URL이 그 날짜의 코스/시간/요금/신청버튼
-//      표를 보여준다. 예약 완료된 시간대는 이 표에 아예 나타나지 않는다(확인됨).
+// [실사이트 HTML로 확인된 것 — 2026-08-28, 로그인 전 상태의 예약 화면 "페이지 소스 보기"로 확보]
+//   - 로그인 폼(퀵로그인, #frmQuickLogin): method=POST,
+//     action=/oldcourse/_mobile/login/login_ok.asp, 필드명 mem_id(아이디/휴대폰번호),
+//     usr_pwd(비밀번호).
+//   - 예약 캘린더 화면(real_reservation.asp) 자체는 달력·시간표 데이터를 담고 있지 않다. 화면
+//     로드시 인라인 스크립트가 숨은 폼을 채운 뒤 jQuery AJAX POST로 별도 .asp 엔드포인트를
+//     불러 그 응답 HTML을 그대로 화면에 끼워 넣는 구조다(서버 렌더링 + 클라이언트 조립). 즉 이
+//     어댑터는 "셸 페이지 GET → 그 안의 숨은 폼 값으로 AJAX 엔드포인트 POST" 2단계로 동작해야
+//     한다:
+//       1) 달력: POST ./real_calendar_ajax_view.asp
+//          (필드: golfrestype=real, schDate=YYYYMM, usrmemcd, toDay=YYYYMMDD, calnum=1|2)
+//       2) 날짜별 시간표: POST ./real_timeinfo_ajax_from.asp
+//          (필드: golfrestype=real, courseid, usrmemcd, pointdate=YYYYMMDD, openyn, dategbn,
+//          choice_time, pointdatechk, inputtype=I)
+//     경로는 모두 /oldcourse/_mobile/GolfRes/onepage/ 기준 상대경로.
+//   - usrmemcd(회원 코드로 추정)는 매 AJAX 호출에 실려가며 셸 페이지의 숨은 필드에서 읽어와야
+//     한다(로그인한 회원마다 값이 다를 수 있어 하드코딩하지 않는다 — 회원 등급별로 잔여
+//     시간표가 다르다는 도메인 전제와도 일치한다).
 //
-// ⚠️ 중요: 위 두 화면의 실제 HTML 태그/클래스명과, 로그인 화면 자체의 폼 필드명/제출 URL은
-// 스크린샷만으로는 확정할 수 없어 아직 실사이트로 검증되지 않았다. 아래 선택자(selector)와
-// LOGIN_PATH/필드명은 흔한 ASP 예약 시스템 구조를 참고한 "구현 착수용 추정치"다.
-// 실사이트에 접속해 브라우저 개발자도구로 실제 구조를 확인한 뒤 이 파일의
-// parseCalendarHtml / parseDaySlotsHtml / login()의 선택자·필드명만 맞춰 조정하면 된다 —
-// 그 외 시스템(감시 엔진, 알림, 화면)은 이 어댑터의 인터페이스에만 의존하므로 영향받지 않는다.
+// [아직 확인 안 된 것]
+//   - 위 두 AJAX 엔드포인트가 실제로 돌려주는 응답 HTML *조각*의 태그/클래스 구조(달력 셀의
+//     예약가능/마감 표시 방식, 시간표 행의 코스/시간/요금/신청버튼 마크업). 이 셸 페이지는
+//     로그인 전 상태로 캡처된 것이라 조각 자체는 담겨 있지 않았다 — parseCalendarHtml /
+//     parseDaySlotsHtml의 선택자는 여전히 스크린샷 기반 추정치다.
+//   - 날짜별 시간표 조회에 필요한 openyn/dategbn 값을 날짜마다 어떻게 알아내는지. 셸 페이지의
+//     초기 기본값(openyn=1, dategbn=6)은 "오늘"에 대한 값이라 다른 날짜에 그대로 맞는다는
+//     보장이 없다 — 달력 조각의 각 날짜 셀이 이 값을 함께 들고 있을 것으로 추정되나(예:
+//     timefrom_change(pointdate, openyn, dategbn, ...) 호출부 존재), 달력 조각 자체를 아직
+//     못 봐서 확정할 수 없다. 지금은 오늘 값을 모든 날짜에 재사용하는 임시 대응이며, 날짜별로
+//     실제 값이 다르면 사이트가 빈 시간표를 돌려줄 수 있다.
+//   - login_ok.asp가 로그인 성공/실패를 어떻게 신호하는지(리다이렉트 위치, 쿠키 유무, 별도
+//     에러 파라미터 등) — 처리 스크립트(common.js/loginfrom.js)가 이번 캡처에 포함되지 않았다.
+//
+// ⚠️ 위 미확인 항목이 실제와 다르면 스캔이 조용히 빈 결과를 낼 수 있다. 브라우저 개발자도구의
+// Network 탭에서(페이지 소스 보기가 아니라) 실제 AJAX 응답 HTML과, 달력에서 날짜를 클릭했을 때
+// 호출되는 timefrom_change의 실제 인자값을 확보하면 이 파일과
+// tests/fixtures/laviebelle-*.html을 함께 갱신한다.
 // ─────────────────────────────────────────────────────────────────────────
 
 const BASE_URL = "https://www.lavieestbellegolfnresort.com";
-const OLD_COURSE_PATH = "/oldcourse";
-const CALENDAR_PATH = `${OLD_COURSE_PATH}/_mobile/GolfRes/onepage/real_reservation.asp`;
-// TODO(실사이트 확인 필요): 실제 로그인 폼의 제출 경로/필드명으로 교체할 것.
-const LOGIN_PATH = `${OLD_COURSE_PATH}/_mobile/memberInfor/login_proc.asp`;
+const ONEPAGE_PATH = "/oldcourse/_mobile/GolfRes/onepage";
+const CALENDAR_SHELL_PATH = `${ONEPAGE_PATH}/real_reservation.asp`;
+const CALENDAR_AJAX_PATH = `${ONEPAGE_PATH}/real_calendar_ajax_view.asp`;
+const DAY_TIME_AJAX_PATH = `${ONEPAGE_PATH}/real_timeinfo_ajax_from.asp`;
+const LOGIN_PATH = "/oldcourse/_mobile/login/login_ok.asp";
 
 export function parseCalendarHtml(html: string): string[] {
   const $ = cheerio.load(html);
@@ -66,9 +92,68 @@ export function parseDaySlotsHtml(html: string, date: string): AvailableSlot[] {
   return slots;
 }
 
+// ── 예약 캘린더 셸 페이지의 숨은 폼(#listform_calender)에서 매 요청에 실어야 하는 세션값을
+// 읽어온다. 실사이트 HTML로 확인된 필드명(usrmemcd, toDay)만 사용한다 — 위 상단 주석 참고. ──
+interface ShellContext {
+  usrmemcd: string;
+  toDay: string; // YYYYMMDD
+}
+
+export function extractShellContext(html: string): ShellContext {
+  const $ = cheerio.load(html);
+  const usrmemcd = $("#usrmemcd").attr("value")?.trim() ?? "";
+  const toDay = $("#toDay").attr("value")?.trim() ?? "";
+  if (!usrmemcd || !toDay) {
+    throw new TransientSiteError("예약 화면에서 필수 숨은 필드(usrmemcd/toDay)를 찾지 못했습니다.");
+  }
+  return { usrmemcd, toDay };
+}
+
+export function yyyymmOf(yyyymmdd: string): string {
+  return yyyymmdd.slice(0, 6);
+}
+
+export function nextYyyymm(yyyymmdd: string): string {
+  const year = parseInt(yyyymmdd.slice(0, 4), 10);
+  const month = parseInt(yyyymmdd.slice(4, 6), 10);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return `${nextYear}${String(nextMonth).padStart(2, "0")}`;
+}
+
 function extractCookies(response: Response): string {
   const cookies = response.headers.getSetCookie?.() ?? [];
   return cookies.map((c) => c.split(";")[0]).join("; ");
+}
+
+async function fetchShellContext(cookie: string): Promise<ShellContext> {
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${CALENDAR_SHELL_PATH}`, { headers: { cookie } });
+  } catch (err) {
+    throw new TransientSiteError(`예약 화면 조회 중 네트워크 오류: ${(err as Error).message}`);
+  }
+  if (!response.ok) {
+    throw new TransientSiteError(`예약 화면 조회 실패(HTTP ${response.status})`);
+  }
+  return extractShellContext(await response.text());
+}
+
+async function postAjaxFragment(path: string, cookie: string, body: Record<string, string>): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: { cookie, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(body).toString(),
+    });
+  } catch (err) {
+    throw new TransientSiteError(`요청 중 네트워크 오류(${path}): ${(err as Error).message}`);
+  }
+  if (!response.ok) {
+    throw new TransientSiteError(`요청 실패(HTTP ${response.status}): ${path}`);
+  }
+  return response.text();
 }
 
 export const laviebelleOldCourseAdapter: SiteAdapter = {
@@ -80,7 +165,7 @@ export const laviebelleOldCourseAdapter: SiteAdapter = {
       response = await fetch(`${BASE_URL}${LOGIN_PATH}`, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ id: loginId, pwd: password }).toString(),
+        body: new URLSearchParams({ mem_id: loginId, usr_pwd: password }).toString(),
         redirect: "manual",
       });
     } catch (err) {
@@ -88,8 +173,9 @@ export const laviebelleOldCourseAdapter: SiteAdapter = {
     }
 
     const cookie = extractCookies(response);
-    // 로그인 실패 시 사이트가 로그인 폼으로 되돌리거나(302 → login 페이지), 쿠키를 발급하지 않는
-    // 것으로 판단한다. 정확한 실패 판별 방식은 실사이트 확인 후 조정 필요(위 주석 참고).
+    // login_ok.asp가 성공/실패를 정확히 어떻게 신호하는지 실사이트로 확인되지 않았다(상단 주석
+    // 참고) — 쿠키가 발급되지 않았거나 로그인 화면으로 되돌아가는 리다이렉트를 실패 신호로
+    // 우선 간주한다.
     if (!cookie || (response.status >= 300 && response.status < 400 && (response.headers.get("location") ?? "").includes("login"))) {
       throw new LoginFailedError();
     }
@@ -101,29 +187,56 @@ export const laviebelleOldCourseAdapter: SiteAdapter = {
   },
 
   async scanBookableDates(session): Promise<string[]> {
-    const response = await fetch(`${BASE_URL}${CALENDAR_PATH}`, {
-      headers: { cookie: session.cookie },
-    });
-    if (!response.ok) {
-      throw new TransientSiteError(`캘린더 조회 실패(HTTP ${response.status})`);
-    }
-    return parseCalendarHtml(await response.text());
+    const ctx = await fetchShellContext(session.cookie);
+    const thisMonth = yyyymmOf(ctx.toDay);
+    const nextMonth = nextYyyymm(ctx.toDay);
+
+    // 실사이트는 화면에 두 달치 달력을 보여준다(calnum=1: 이번 달, calnum=2: 다음 달).
+    const [fragment1, fragment2] = await Promise.all([
+      postAjaxFragment(CALENDAR_AJAX_PATH, session.cookie, {
+        golfrestype: "real",
+        schDate: thisMonth,
+        usrmemcd: ctx.usrmemcd,
+        toDay: ctx.toDay,
+        calnum: "1",
+      }),
+      postAjaxFragment(CALENDAR_AJAX_PATH, session.cookie, {
+        golfrestype: "real",
+        schDate: nextMonth,
+        usrmemcd: ctx.usrmemcd,
+        toDay: ctx.toDay,
+        calnum: "2",
+      }),
+    ]);
+
+    return parseCalendarHtml(fragment1 + fragment2);
   },
 
   async scanDaySlots(session, date): Promise<AvailableSlot[]> {
-    const response = await fetch(`${BASE_URL}${CALENDAR_PATH}?date=${date}`, {
-      headers: { cookie: session.cookie },
+    const ctx = await fetchShellContext(session.cookie);
+    const pointdate = date.replace(/-/g, "");
+
+    const fragment = await postAjaxFragment(DAY_TIME_AJAX_PATH, session.cookie, {
+      golfrestype: "real",
+      courseid: "0",
+      usrmemcd: ctx.usrmemcd,
+      pointdate,
+      // TODO(실사이트 확인 필요): 날짜별 실제 openyn/dategbn을 못 구해서(상단 주석 참고) 셸
+      // 페이지의 "오늘" 기본값을 모든 날짜에 재사용하는 임시 대응이다.
+      openyn: "1",
+      dategbn: "6",
+      choice_time: "00",
+      pointdatechk: "",
+      inputtype: "I",
     });
-    if (!response.ok) {
-      throw new TransientSiteError(`시간표 조회 실패(HTTP ${response.status})`);
-    }
-    return parseDaySlotsHtml(await response.text(), date);
+
+    return parseDaySlotsHtml(fragment, date);
   },
 
-  buildDeepLink(date): string {
+  buildDeepLink(): string {
     // 날짜별 직접 링크가 실사이트에서 실제로 가능한지 확인되지 않아, 현재는 안전한 기본값으로
-    // 캘린더 메인 화면 URL만 반환한다. 실사이트가 날짜를 쿼리 파라미터로 받는 구조임이 확인되면
+    // 캘린더 셸 화면 URL만 반환한다. 실사이트가 날짜를 쿼리 파라미터로 받는 구조임이 확인되면
     // 이 함수가 해당 날짜의 URL을 직접 구성하도록 바꾼다.
-    return `${BASE_URL}${CALENDAR_PATH}`;
+    return `${BASE_URL}${CALENDAR_SHELL_PATH}`;
   },
 };
