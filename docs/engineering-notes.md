@@ -46,12 +46,24 @@ PushSubscription을 전부 지워야 한다는 요건은, 애플리케이션 코
 페이지 로드시 인라인 스크립트가 jQuery AJAX POST로 별도 엔드포인트
 (`real_calendar_ajax_view.asp`, `real_timeinfo_ajax_from.asp`)를 호출해 그 응답 HTML을
 화면에 끼워 넣는 방식이다. 사용자가 제공한 실제 페이지 소스/화면 캡처로 이 구조, 로그인 폼
-필드명(`mem_id`/`usr_pwd`, `login_ok.asp`), 그리고 시간표 AJAX 응답 조각의 실제 마크업
-(`parseDaySlotsHtml`)까지 확인해 `src/lib/adapters/laviebelle.ts`에 반영했다. 반면 달력
-AJAX 응답 자체의 HTML 구조(`parseCalendarHtml`의 선택자)는 여전히 스크린샷 기반 추정치다 —
-"페이지 소스 보기"로는 최초 로드 HTML만 보이고, AJAX가 채워 넣는 실제 화면 요소는 개발자도구
-Elements/Network에서 화면을 직접 조작해야 확인할 수 있기 때문이다. 배포 전 실제 달력 AJAX
-응답을 확인해 선택자를 맞춰야 한다.
+필드명(`mem_id`/`usr_pwd`, `login_ok.asp`), 달력·시간표 AJAX 응답 조각의 실제 마크업
+(`parseCalendarHtml`/`parseCalendarDays`/`parseDaySlotsHtml`)까지 전부 확인해
+`src/lib/adapters/laviebelle.ts`에 반영했다. "페이지 소스 보기"로는 최초 로드 HTML만 보이고,
+AJAX가 채워 넣는 실제 화면 요소는 개발자도구 Elements 탭에서 해당 DOM을 검사(Inspect)한 뒤
+outerHTML을 복사해야 확인할 수 있다는 점이 관건이었다.
+
+## 라비에벨 달력 조각의 날짜 링크(timefrom_change)가 그 날짜의 openyn/dategbn을 직접 담고 있다
+
+달력 AJAX 조각의 각 날짜는 `<a href="javascript:timefrom_change('YYYYMMDD','openyn',
+'dategbn',...)">`로 렌더링된다 — 즉 날짜별 시간표 조회(`real_timeinfo_ajax_from.asp`)에
+필요한 `openyn`/`dategbn` 값을 별도로 추측하거나 계산할 필요 없이, 달력을 파싱할 때 그대로
+읽어오면 된다. `scanBookableDates`가 이 값을 `session`(어댑터별로 내용이 달라도 되는
+`SiteSession`)에 캐싱해두고, 뒤이어 호출되는 `scanDaySlots`가 재사용한다 — scanCycle.ts가
+항상 `scanBookableDates`를 먼저 호출한 뒤 같은 `session`으로 `scanDaySlots`를 호출하는 현재
+순서에 의존하는 설계다.
+
+날짜의 예약 가능 여부 자체는 `<td>`의 첫 번째 자식 `<div>`의 클래스가 `cm_liv`(예약 가능)인지
+아닌지로 판별한다 — 화면의 "예약"/"마감" 범례(`cm_navi_liv`/`cm_navi_end`)와 대응된다.
 
 ## 라비에벨 시간표에 보이는 요금은 "정가"이고, 실제 결제 요금은 신청 버튼의 onclick 인자에만 있다
 

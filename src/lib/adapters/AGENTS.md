@@ -31,10 +31,10 @@
 ## 현재 상태에 대한 특기 사항
 
 `laviebelle.ts`는 로그인 폼 필드명/제출 경로, "셸 페이지 GET → AJAX 엔드포인트 POST" 2단계
-구조, 날짜별 시간표 AJAX 응답 조각의 실제 마크업(`parseDaySlotsHtml`)까지 실사이트 캡처로
-확인됐다. 다만 달력 AJAX 응답 조각(`parseCalendarHtml`의 선택자), 날짜별 openyn/dategbn 값,
-로그인 성공/실패 신호 방식은 아직 스크린샷 기반 추정치다. 이 파일을 수정할 때는 상단 주석의
-"확인된 것"/"아직 확인 안 된 것" 구분과 "⚠️" 경고를 먼저 읽는다.
+구조, 달력·날짜별 시간표 AJAX 응답 조각의 실제 마크업(`parseCalendarHtml`/`parseCalendarDays`/
+`parseDaySlotsHtml`), 날짜별 openyn/dategbn 값까지 전부 실사이트 캡처로 확인됐다. 유일하게
+남은 미확인 항목은 `login_ok.asp`의 로그인 성공/실패 신호 방식이다. 이 파일을 수정할 때는
+상단 주석의 "확인된 것"/"아직 확인 안 된 것" 구분과 "⚠️" 경고를 먼저 읽는다.
 
 ## 테스트 가이드
 

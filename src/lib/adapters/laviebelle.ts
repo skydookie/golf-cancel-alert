@@ -32,23 +32,24 @@ import { LoginFailedError, TransientSiteError } from "@/lib/adapters/types";
 //     pointname, bookgdatekor, bookghole, flagtype, punish_cd, greenfee_base, greenfee_dis,
 //     ...)"` 호출 인자 중 `greenfee_dis`에만 있다. 셀 텍스트만 파싱하면 알림에 실제보다 비싼
 //     요금이 들어간다 — `parseDaySlotsHtml`은 이 인자에서 가격을 뽑는다.
+//   - (2026-08-28, 로그인 상태에서 개발자도구 Elements 탭 → 달력 `<table>`의 outerHTML로
+//     확보 — real_calendar_ajax_view.asp 응답 조각) 각 날짜 칸(`<td>`)은 `<a
+//     href="javascript:timefrom_change('YYYYMMDD','openyn','dategbn','','00','E'[,
+//     토큰])">일</a>`을 담고 있고, **그 날짜의 예약 가능 여부는 `<td>`의 첫 번째 자식 div의
+//     클래스가 "cm_liv"(예약 가능)인지 "cm_end"(마감/오픈전, 둘 다 동일 취급)인지로 판별한다**
+//     (빈 칸은 이 div에 클래스 자체가 없다). 날짜가 없는 칸에는 `<a>`가 아예 없다. 이로써
+//     날짜별 `openyn`/`dategbn`을 더 이상 추측하지 않아도 된다 — 달력 조각을 파싱할 때 각
+//     날짜의 실제 값을 함께 읽어 `scanDaySlots` 호출에 그대로 재사용한다(`LaviebelleSession.
+//     dayMeta` 참고). "오픈전" 전용 클래스(레이아웃의 주석 처리된 `cm_navi_open` 범례 참고)는
+//     아직 실제 데이터에서 관측되지 않았지만, "cm_liv"가 아닌 모든 값은 어차피 "신청 불가"로
+//     동일 취급하므로 판별 로직에 영향 없다.
 //
 // [아직 확인 안 된 것]
-//   - 달력 AJAX(real_calendar_ajax_view.asp) 응답 조각의 태그/클래스 구조(날짜 셀의 예약가능/
-//     마감 표시 방식) — `parseCalendarHtml`의 선택자는 여전히 스크린샷 기반 추정치다.
-//   - 날짜별 시간표 조회에 필요한 openyn/dategbn 값을 날짜마다 어떻게 알아내는지. 셸 페이지의
-//     초기 기본값(openyn=1, dategbn=6)은 "오늘"에 대한 값이라 다른 날짜에 그대로 맞는다는
-//     보장이 없다 — 달력 조각의 각 날짜 셀이 이 값을 함께 들고 있을 것으로 추정되나(예:
-//     timefrom_change(pointdate, openyn, dategbn, ...) 호출부 존재), 달력 조각 자체를 아직
-//     못 봐서 확정할 수 없다. 지금은 오늘 값을 모든 날짜에 재사용하는 임시 대응이며, 날짜별로
-//     실제 값이 다르면 사이트가 빈 시간표를 돌려줄 수 있다.
 //   - login_ok.asp가 로그인 성공/실패를 어떻게 신호하는지(리다이렉트 위치, 쿠키 유무, 별도
 //     에러 파라미터 등) — 처리 스크립트(common.js/loginfrom.js)가 아직 확보되지 않았다.
 //
-// ⚠️ 위 미확인 항목이 실제와 다르면 스캔이 조용히 빈 결과를 낼 수 있다. 개발자도구
-// Elements/Network에서 실제 달력 조각 HTML과, 달력에서 날짜를 클릭했을 때 호출되는
-// timefrom_change의 실제 인자값을 확보하면 이 파일과 tests/fixtures/laviebelle-*.html을
-// 함께 갱신한다.
+// ⚠️ 위 미확인 항목이 실제와 다르면 로그인 실패를 성공으로(또는 그 반대로) 오판할 수 있다.
+// 실제 로그인 실패 시도의 응답(리다이렉트 위치/쿠키 유무)을 확보하면 `login()`을 갱신한다.
 // ─────────────────────────────────────────────────────────────────────────
 
 const BASE_URL = "https://www.lavieestbellegolfnresort.com";
@@ -58,25 +59,45 @@ const CALENDAR_AJAX_PATH = `${ONEPAGE_PATH}/real_calendar_ajax_view.asp`;
 const DAY_TIME_AJAX_PATH = `${ONEPAGE_PATH}/real_timeinfo_ajax_from.asp`;
 const LOGIN_PATH = "/oldcourse/_mobile/login/login_ok.asp";
 
-export function parseCalendarHtml(html: string): string[] {
-  const $ = cheerio.load(html);
-  const bookableDates: string[] = [];
-  // 달력은 월별 테이블(예: 2026.08, 2026.09)이 여러 개 있고, 각 월 헤더 다음에 요일 테이블이 온다.
-  $(".gres-calendar-month").each((_, monthEl) => {
-    const monthLabel = $(monthEl).find(".gres-calendar-month-label").text().trim(); // 예: "2026.08"
-    const [year, month] = monthLabel.split(".").map((n) => parseInt(n, 10));
-    if (!year || !month) return;
+export interface CalendarDayInfo {
+  date: string; // YYYY-MM-DD
+  bookable: boolean;
+  openyn: string;
+  dategbn: string;
+}
 
-    $(monthEl)
-      .find("td.gres-day--bookable[data-day]")
-      .each((_, dayEl) => {
-        const day = parseInt($(dayEl).attr("data-day") ?? "", 10);
-        if (!day) return;
-        const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        bookableDates.push(date);
-      });
+// timefrom_change('20260829','2','7','','00','T','526B8EF0E03BDD21') — 앞 세 인자만 쓴다
+// (pointdate, openyn, dategbn). 나머지(courseid/choice_time/atype/토큰)는 이 시점에는 필요
+// 없다 — scanDaySlots가 매번 courseid="0"/choice_time="00"으로 다시 조회하기 때문이다.
+const TIMEFROM_CHANGE_RE = /timefrom_change\('(\d{8})',\s*'([^']*)',\s*'([^']*)'/;
+
+/** 달력 조각에서 날짜별 예약 가능 여부와 openyn/dategbn을 함께 뽑는다. */
+export function parseCalendarDays(html: string): CalendarDayInfo[] {
+  const $ = cheerio.load(html);
+  const days: CalendarDayInfo[] = [];
+
+  $('a[href^="javascript:timefrom_change("]').each((_, el) => {
+    const href = $(el).attr("href") ?? "";
+    const match = href.match(TIMEFROM_CHANGE_RE);
+    if (!match) return;
+    const [, yyyymmdd, openyn, dategbn] = match;
+    const date = `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`;
+
+    // 날짜 칸(<td>)의 맨 바깥(첫 번째 자식) div의 클래스가 예약 가능 여부를 나타낸다 —
+    // "cm_liv"(예약 가능) 대 그 외(마감/오픈전 등, 전부 "신청 불가"로 동일 취급).
+    const outerDiv = $(el).closest("td").children("div").first();
+    const bookable = outerDiv.hasClass("cm_liv");
+
+    days.push({ date, bookable, openyn, dategbn });
   });
-  return bookableDates;
+
+  return days;
+}
+
+export function parseCalendarHtml(html: string): string[] {
+  return parseCalendarDays(html)
+    .filter((d) => d.bookable)
+    .map((d) => d.date);
 }
 
 export function parseDaySlotsHtml(html: string, date: string): AvailableSlot[] {
@@ -156,6 +177,15 @@ export function nextYyyymm(yyyymmdd: string): string {
   const nextMonth = month === 12 ? 1 : month + 1;
   const nextYear = month === 12 ? year + 1 : year;
   return `${nextYear}${String(nextMonth).padStart(2, "0")}`;
+}
+
+// SiteSession의 내용은 어댑터별로 다를 수 있다(types.ts 참고) — 이 어댑터는 scanBookableDates가
+// 읽어낸 날짜별 openyn/dategbn을 세션 객체에 캐싱해, 뒤이은 scanDaySlots 호출이 재사용하게
+// 한다. scanCycle.ts가 항상 scanBookableDates를 먼저 호출한 뒤 같은 session으로
+// scanDaySlots를 호출하는 현재 순서에 의존한다 — 순서가 바뀌면(예: scanDaySlots가 먼저 호출)
+// 캐시가 비어 있어 아래 fallback 기본값을 쓰게 된다.
+interface LaviebelleSession extends SiteSession {
+  dayMeta?: Map<string, { openyn: string; dategbn: string }>;
 }
 
 function extractCookies(response: Response): string {
@@ -246,22 +276,32 @@ export const laviebelleOldCourseAdapter: SiteAdapter = {
       }),
     ]);
 
-    return parseCalendarHtml(fragment1 + fragment2);
+    const days = [...parseCalendarDays(fragment1), ...parseCalendarDays(fragment2)];
+
+    // scanDaySlots가 날짜별 실제 openyn/dategbn을 재사용할 수 있도록 세션에 캐싱한다(위
+    // LaviebelleSession 주석 참고).
+    (session as LaviebelleSession).dayMeta = new Map(
+      days.map((d) => [d.date, { openyn: d.openyn, dategbn: d.dategbn }])
+    );
+
+    return days.filter((d) => d.bookable).map((d) => d.date);
   },
 
   async scanDaySlots(session, date): Promise<AvailableSlot[]> {
     const ctx = await fetchShellContext(session.cookie);
     const pointdate = date.replace(/-/g, "");
+    const meta = (session as LaviebelleSession).dayMeta?.get(date);
 
     const fragment = await postAjaxFragment(DAY_TIME_AJAX_PATH, session.cookie, {
       golfrestype: "real",
       courseid: "0",
       usrmemcd: ctx.usrmemcd,
       pointdate,
-      // TODO(실사이트 확인 필요): 날짜별 실제 openyn/dategbn을 못 구해서(상단 주석 참고) 셸
-      // 페이지의 "오늘" 기본값을 모든 날짜에 재사용하는 임시 대응이다.
-      openyn: "1",
-      dategbn: "6",
+      // scanBookableDates가 먼저 이 날짜의 실제 openyn/dategbn을 읽어뒀으면 그 값을 쓴다.
+      // 못 찾은 경우(예: DB에는 남아있지만 이번 달력 조회 범위 밖으로 밀려난 날짜)에만 "오늘"
+      // 기본값으로 대체한다 — 이 fallback 경로는 실사이트로 검증되지 않았다.
+      openyn: meta?.openyn ?? "1",
+      dategbn: meta?.dategbn ?? "6",
       choice_time: "00",
       pointdatechk: "",
       inputtype: "I",

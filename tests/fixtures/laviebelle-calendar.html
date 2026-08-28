@@ -1,36 +1,516 @@
 <!--
-  ⚠️ 실제 사이트 HTML이 아니라, 스크린샷을 근거로 구성한 예시(fixture)다.
-  실사이트 구조가 확인되면 이 파일과 src/lib/adapters/laviebelle.ts의 선택자를 함께 갱신할 것.
+  실제 사이트에서 캡처한 HTML(2026-08-28, 로그인 상태, 2026년 8월 달력 화면에서 개발자도구
+  Elements 탭 → <table> outerHTML로 확보). real_calendar_ajax_view.asp가
+  #calendar_view_ajax_1에 채워 넣는 응답 조각과 사실상 동일한 구조로 간주한다.
+  이 달은 8/29~31만 "cm_liv"(예약 가능)이고 나머지(1~28, 오늘 포함)는 "cm_end"(마감)다.
 -->
 <html>
   <body>
-    <div class="gres-calendar-month">
-      <div class="gres-calendar-month-label">2026.08</div>
-      <table>
-        <tbody>
-          <tr>
-            <td data-day="27" class="gres-day--today">27</td>
-            <td data-day="28" class="gres-day--bookable">28</td>
-            <td data-day="29" class="gres-day--bookable">29</td>
-            <td data-day="30" class="gres-day--bookable">30</td>
-            <td data-day="31" class="gres-day--bookable">31</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="gres-calendar-month">
-      <div class="gres-calendar-month-label">2026.09</div>
-      <table>
-        <tbody>
-          <tr>
-            <td data-day="1" class="gres-day--bookable">1</td>
-            <td data-day="2" class="gres-day--closed">2</td>
-            <td data-day="3" class="gres-day--not-open">3</td>
-            <td data-day="4" class="gres-day--bookable">4</td>
-            <td data-day="5" class="gres-day--bookable">5</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <table>
+            <colgroup>
+                <col style="width:14%;">
+                <col style="width:14%;">
+                <col style="width:14%;">
+                <col style="width:14%;">
+                <col style="width:14%;">
+                <col style="width:15%;">
+                <col style="width:15%;">
+            </colgroup>
+                    <tbody><tr>
+                <td class="cm_sun">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_sat">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260801','2','7','','00','E')">1</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="cm_sun">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260802','2','1','','00','E')">2</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260803','1','2','','00','E')">3</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260804','1','3','','00','E')">4</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260805','1','4','','00','E')">5</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260806','1','5','','00','E')">6</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260807','1','6','','00','E')">7</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_sat">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260808','2','7','','00','E')">8</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="cm_sun">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260809','2','1','','00','E')">9</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260810','1','2','','00','E')">10</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260811','1','3','','00','E')">11</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260812','1','4','','00','E')">12</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260813','1','5','','00','E')">13</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260814','1','6','','00','E')">14</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_sat">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260815','2','7','','00','E')">15</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="cm_sun">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260816','2','1','','00','E')">16</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_sun">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260817','2','2','','00','E')">17</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260818','1','3','','00','E')">18</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260819','1','4','','00','E')">19</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260820','1','5','','00','E')">20</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260821','1','6','','00','E')">21</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_sat">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260822','2','7','','00','E')">22</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="cm_sun">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260823','2','1','','00','E')">23</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260824','1','2','','00','E')">24</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260825','1','3','','00','E')">25</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260826','1','4','','00','E')">26</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260827','1','5','','00','E')">27</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_end">
+                    <div class="cm_tod">
+                    <div class="cm_act">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260828','1','6','','00','E')">28</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_sat">
+                    <div class="cm_liv">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260829','2','7','','00','T','526B8EF0E03BDD21')">29</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="cm_sun">
+                    <div class="cm_liv">
+                    <div class="">
+                    <div class="cm_red">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260830','2','1','','00','T','882F3D1D911ECD0F')">30</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div class="cm_liv">
+                    <div class="">
+                    <div class="">
+                        <div class="cm_day_box">
+                            <a href="javascript:timefrom_change('20260831','1','2','','00','T','92AA844C57E48ABC')">31</a>
+
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_day">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+                <td class="cm_sat">
+                    <div>
+                    <div>
+                    <div>
+                        <div class="cm_day_box">
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </td>
+            </tr>
+
+        </tbody></table>
   </body>
 </html>

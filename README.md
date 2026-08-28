@@ -40,26 +40,16 @@ npm run dev
 
 ## 실사이트 연동 전 반드시 확인해야 하는 것 (중요)
 
-`src/lib/adapters/laviebelle.ts` 상단 주석 참고. 실제 화면 캡처로 로그인 폼 필드명
-(`mem_id`/`usr_pwd`, `/oldcourse/_mobile/login/login_ok.asp`), "셸 페이지 GET → AJAX
-엔드포인트 POST" 2단계 구조, 날짜별 시간표 AJAX 응답 조각의 실제 마크업(`parseDaySlotsHtml`,
-요금은 셀 텍스트가 아니라 신청 링크의 할인가 인자에서 뽑아야 함)까지는 확인해서 반영했지만,
-**달력** AJAX 응답 조각의 구조와 로그인 성공/실패 신호 방식은 아직 스크린샷 기반
-추정치입니다. 배포 전에 반드시:
+`src/lib/adapters/laviebelle.ts` 상단 주석 참고. 실제 화면 캡처로 로그인 폼 필드명, 셸
+페이지 + AJAX 2단계 구조, 달력·날짜별 시간표 AJAX 응답 조각의 실제 마크업까지 전부 확인해서
+반영했습니다. 배포 전 남은 확인 사항은 딱 하나입니다:
 
-1. 라비에벨 사이트에 로그인한 상태로 개발자도구를 열어(페이지 소스 보기로는 안 보임) 예약
-   캘린더 화면의 날짜 셀들을 감싸는 `<table>`(또는 그 이상)을 검사(Inspect) → outerHTML을
-   복사해 확인한다. 예약 가능한 날짜와 마감/오픈전 날짜를 각각 클릭했을 때
-   `timefrom_change`에 실제로 전달되는 `openyn`/`dategbn` 값도 함께 확인한다.
-2. `parseCalendarHtml`의 선택자(`.gres-calendar-month`, `td.gres-day--bookable` 등)와
-   `scanDaySlots`의 `openyn`/`dategbn` 기본값을 실제 구조에 맞게 수정한다.
-3. 로그인 성공/실패 시 `login_ok.asp`가 실제로 어떻게 응답하는지(리다이렉트 위치, 쿠키 유무
-   등) 확인해 `login()`의 판별 조건을 맞춘다.
-4. `tests/fixtures/laviebelle-calendar.html`을 실제 구조를 반영한 fixture로 교체하고
-   `npm test`로 재검증한다.
+1. 로그인 성공/실패 시 `login_ok.asp`가 실제로 어떻게 응답하는지(리다이렉트 위치, 쿠키 유무
+   등) — 일부러 틀린 비밀번호로 로그인해보고 개발자도구 Network 탭에서 확인한 뒤
+   `login()`의 판별 조건을 맞춘다.
 
 뉴코스(`laviebelle-new`) 지원 여부와, 취소표 클릭 시 날짜별 화면으로 직접 연결되는 딥링크가
-가능한지도 같은 방식으로 실사이트에서 확인이 필요합니다.
+가능한지도 실사이트에서 확인이 필요합니다.
 
 ## PWA 아이콘
 
