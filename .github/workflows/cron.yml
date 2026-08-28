@@ -1,0 +1,18 @@
+name: 취소표 감시 스케줄러
+
+# Vercel 무료 티어의 자체 Cron은 하루 1회로 제한되어 있어, 몇 분 간격 감시에는 GitHub Actions의
+# 무료 scheduled workflow를 대신 사용한다. 배포된 앱의 /api/cron/scan 을 주기적으로 호출한다.
+on:
+  schedule:
+    - cron: "*/5 * * * *" # 5분마다 (GitHub Actions 특성상 정확히 지켜지지 않을 수 있음 — 개인용 규모엔 충분)
+  workflow_dispatch: {}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 감시 사이클 트리거
+        run: |
+          curl -sS -X POST "${{ secrets.APP_BASE_URL }}/api/cron/scan" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --fail-with-body
