@@ -53,6 +53,33 @@ describe("runScanCycle", () => {
     expect(summary.credentialsSkippedNoConditions).toBe(1);
   });
 
+  it("loginless 어댑터는 login()·복호화를 건너뛰고 빈 세션으로 스캔한다", async () => {
+    // loginless 골프장은 자격증명이 빈 값으로 저장돼 있다.
+    prismaMock.facilityCredential.findMany.mockResolvedValue([
+      baseCredential({ facilityId: "lakewood", encryptedLoginId: "enc:", encryptedPassword: "enc:" }),
+    ]);
+    prismaMock.watchCondition.findMany.mockResolvedValue([condition()]);
+    prismaMock.slotObservationState.findMany.mockResolvedValue([]);
+
+    const adapter = {
+      loginless: true,
+      login: vi.fn().mockRejectedValue(new Error("login()을 호출하면 안 됨")),
+      scanBookableDates: vi.fn().mockResolvedValue(["2026-09-06"]),
+      scanDaySlots: vi
+        .fn()
+        .mockResolvedValue([{ facilityId: "lakewood", date: "2026-09-06", course: "물길", time: "07:26", price: null }]),
+      buildDeepLink: vi.fn().mockReturnValue("https://lakewood.co.kr/reservation/golf"),
+    };
+    getAdapter.mockReturnValue(adapter);
+
+    const { runScanCycle } = await import("@/lib/scanCycle");
+    const summary = await runScanCycle();
+
+    expect(adapter.login).not.toHaveBeenCalled();
+    expect(adapter.scanBookableDates).toHaveBeenCalledWith({ cookie: "" });
+    expect(summary.notificationsSent).toBe(1);
+  });
+
   it("새로 신청 가능해진 슬롯이 관심조건에 맞으면 정확히 1건 알림을 보낸다", async () => {
     prismaMock.facilityCredential.findMany.mockResolvedValue([baseCredential()]);
     prismaMock.watchCondition.findMany.mockResolvedValue([condition()]);

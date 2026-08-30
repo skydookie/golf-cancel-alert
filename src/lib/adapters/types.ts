@@ -34,6 +34,14 @@ export interface SiteSession {
 export interface SiteAdapter {
   facilityId: string;
 
+  /**
+   * true면 이 골프장은 로그인 없이(비회원 화면으로) 감시한다 — 엔진이 `login()`을 호출하지
+   * 않고 자격증명도 요구하지 않는다. 사이트가 비로그인 상태로도 잔여 시간표를 보여주고,
+   * 자동 로그인이 위험한(봇 차단 등) 경우에만 쓴다. 비회원 화면이라 회원 등급별 전용
+   * 시간표는 못 볼 수 있음을 사용자가 감수한다. (기본값: false — 반드시 로그인)
+   */
+  loginless?: boolean;
+
   /** 아이디/비밀번호로 로그인해 세션을 얻는다. 실패 시 LoginFailedError/TransientSiteError를 던진다. */
   login(loginId: string, password: string): Promise<SiteSession>;
 

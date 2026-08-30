@@ -4,12 +4,13 @@ import { prisma } from "@/lib/db";
 import { getUserIdFromRequest } from "@/lib/auth";
 import { jsonError } from "@/lib/api-helpers";
 import { encryptSecret } from "@/lib/crypto";
-import { isKnownFacilityId } from "@/lib/facilities";
+import { isKnownFacilityId, isLoginlessFacility } from "@/lib/facilities";
 
 const bodySchema = z.object({
   facilityId: z.string().min(1),
-  loginId: z.string().min(1),
-  password: z.string().min(1),
+  // loginless 골프장은 아이디/비밀번호가 필요 없다. 아래에서 골프장별로 다시 검사한다.
+  loginId: z.string().optional(),
+  password: z.string().optional(),
 });
 
 // 절대 암호화된/복호화된 비밀번호를 응답에 담지 않는다 — 목록 조회 등에서 상태만 보여준다.
@@ -53,6 +54,11 @@ export async function POST(request: NextRequest) {
     return jsonError("지원하지 않는 골프장입니다.", 400);
   }
 
+  const loginless = isLoginlessFacility(facilityId);
+  if (!loginless && (!loginId || !password)) {
+    return jsonError("아이디와 비밀번호를 입력해주세요.", 400);
+  }
+
   const existing = await prisma.facilityCredential.findUnique({
     where: { userId_facilityId: { userId, facilityId } },
   });
@@ -67,8 +73,9 @@ export async function POST(request: NextRequest) {
     data: {
       userId,
       facilityId,
-      encryptedLoginId: encryptSecret(loginId),
-      encryptedPassword: encryptSecret(password),
+      // loginless 골프장은 빈 문자열을 암호화해 저장한다(엔진이 복호화하지 않음).
+      encryptedLoginId: encryptSecret(loginless ? "" : loginId!),
+      encryptedPassword: encryptSecret(loginless ? "" : password!),
       status: "ACTIVE",
     },
   });

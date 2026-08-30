@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseCalendarDates, parseDaySlots, upcomingMonths } from "@/lib/adapters/lakewood";
+import {
+  parseCalendarDates,
+  parseDaySlots,
+  upcomingMonths,
+  lakewoodAdapter,
+} from "@/lib/adapters/lakewood";
+import { getAdapter } from "@/lib/adapters/registry";
+import { isLoginlessFacility, FACILITY_IDS } from "@/lib/facilities";
 
 // lakewood-calendar.html / lakewood-timelist.html은 2026-08-30 실사이트에서 관측한 구조를
 // 반영해 재구성한 fixture다(전체 raw 응답은 botnhuman 봇 차단에 막혀 확보 못 함 — 각 파일
@@ -39,6 +46,26 @@ describe("parseDaySlots", () => {
   it("facilityId 인자를 넘기면 슬롯에 반영된다", () => {
     const slots = parseDaySlots(fixture("lakewood-timelist.html"), "2026-09-01", "lakewood-x");
     expect(slots.every((s) => s.facilityId === "lakewood-x")).toBe(true);
+  });
+});
+
+describe("loginless 등록", () => {
+  it("어댑터는 loginless이고 registry/facilities와 일관된다", () => {
+    expect(lakewoodAdapter.loginless).toBe(true);
+    expect(getAdapter("lakewood")).toBe(lakewoodAdapter);
+    expect(FACILITY_IDS).toContain("lakewood");
+    expect(isLoginlessFacility("lakewood")).toBe(true);
+    expect(isLoginlessFacility("laviebelle-old")).toBe(false);
+  });
+
+  it("login()은 호출되면 안 되며, 호출 시 TransientSiteError를 던진다", async () => {
+    await expect(lakewoodAdapter.login("x", "y")).rejects.toThrow();
+  });
+
+  it("buildDeepLink는 예약 화면 URL을 반환한다", () => {
+    expect(lakewoodAdapter.buildDeepLink("2026-09-01")).toBe(
+      "https://lakewood.co.kr/reservation/golf"
+    );
   });
 });
 

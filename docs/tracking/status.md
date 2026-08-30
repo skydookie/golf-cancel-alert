@@ -15,6 +15,12 @@
   접두사만 다르고 구조가 동일해 `createLaviebelleAdapter` 팩토리로 공유 구현(2026-08-30
   실사이트 재조사로 확정). 유일한 미검증 항목은 `login_ok.asp`의 로그인 성공/실패 신호 방식
   (아래 "막힌 부분" 참고).
+- **레이크우드CC** 어댑터 — `loginless: true`(봇 차단 때문에 비로그인 감시). 달력/시간표
+  익명 요청, 파싱 로직 단위 테스트 통과(`tests/adapters/lakewood.test.ts`, 10개). 엔진에
+  loginless 경로 추가(`scanCycle` — login 스킵, 빈 세션), `credentials` API·설정 화면이
+  loginless 골프장은 계정 없이 등록. fixture는 관측 구조 기반 재구성(전체 raw 캡처는 봇
+  차단으로 미확보). 실제 스캔 5분 주기에서 익명 요청이 얼마나 자주 봇 차단에 걸리는지는
+  운영하며 확인 필요(findings.md).
 - 감시·매칭·알림 엔진(전환 감지, 재알림 방지, 재전환 재알림, 동시다발 개별 알림, 로그인 실패
   처리) — 8개 시나리오 테스트 통과(`tests/lib/scanCycle.test.ts`).
 - 스케쥴 API + 화면(매칭된 슬롯 목록, 최근 알림 이력, 딥링크) —

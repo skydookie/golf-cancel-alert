@@ -1,39 +1,31 @@
 # findings.md — 미해결 문제
 
-## 레이크우드(lakewood.co.kr) 어댑터 — 봇 차단이 자동 스캔을 막음 (2026-08-30)
+## 레이크우드(lakewood.co.kr) — loginless 감시로 등록됨 (2026-08-30)
 
-**결론: 어댑터는 구현했으나(`src/lib/adapters/lakewood.ts`) `facilities.ts`/`registry.ts`에
-등록하지 않았다.** 조사 중 반복 fetch가 botnhuman 봇 탐지에 걸려 세션이
-`https://lakewood-cdn.botnhuman.com/macro.html?msg=...(강화된 보안정책... 다시 시도해 주십시오)`
-로 리다이렉트됐다. 5분마다 자동 로그인·스캔하는 엔진에 물리면 곧 차단되고, 회원 계정이
-잠길 위험도 있다. 사용자가 이 위험을 받아들이기로 하면 그때 등록한다.
+**결론: `loginless: true` 어댑터로 등록**(`facilities.ts`/`registry.ts`/`adapters/lakewood.ts`).
+레이크우드는 봇 탐지(botnhuman)가 활성이라 자동 로그인이 위험하다 — 조사 중 반복 fetch가
+실제로 걸려 세션이 `botnhuman.com/macro.html`("강화된 보안정책... 다시 시도해 주십시오")로
+리다이렉트됐다. 대신 **비로그인(익명) 상태로 감시한다**: 달력/시간표 AJAX가 세션 없이도
+잔여 시간표를 돌려준다(`credentials:'omit'` fetch로 확인). 사용자는 계정을 등록하지 않고
+"골프장만 선택"으로 감시를 켠다. 취소표가 뜨면 알림 → 사용자가 직접 로그인해 예약.
 
-**로그인은 확정됨**: `POST /member/loginChk`, form 본문 `usrId`·`usrPwd`·
-`returnURL=/reservation/golf` → JSON `{"success":"S",...}` = 성공(실사이트 요청 캡처로 확인).
-coDiv·안티매크로 토큰 불필요. 로그인 실패 응답 형태(success 값)는 미확인.
+**남은 한계/미확인**:
+- 비회원 화면이라 회원 등급 전용 시간표는 못 볼 수 있다(사용자가 감수).
+- 익명 요청도 반복하면 botnhuman에 걸릴 수 있다. 걸리면 응답이 `macro.html`이 되는데
+  `postAnon`이 이를 감지해 `TransientSiteError`로 던진다(계정 없음 → 잠김 위험 없음,
+  그 사이클만 건너뜀). 5분 주기로 얼마나 자주 걸리는지는 운영하며 봐야 안다.
+- 로그인 방식은 참고용으로 어댑터에 기록만 해둠(엔진은 안 씀): `POST /member/loginChk`,
+  `usrId`·`usrPwd`·`returnURL` → JSON `{success:"S"}`. 실패 응답 형태는 미확인.
 
-**상황**: 사용자가 레이크우드CC 추가를 요청. 실사이트 조사 결과:
-- **스캔 경로는 파악됨**(조사 초반에는 세션 쿠키만으로 raw fetch가 동작했으나, 반복하자 차단됨):
-  - 달력: `POST /reservation/ajax/golfCalendar` (mainForm serialize, `workMonth=YYYYMM`)
-    → HTML. 예약 가능일 = `<a class="cal_live" onclick="clickCal(cls,'A','YYYYMMDD','OPEN')">`.
-    마감 = `cal_end`/`cal_closed`, 오픈전 = 클래스 없음/`NOOPEN`.
-  - 시간표: `POST /reservation/ajax/golfTimeList` (mainForm serialize, `workDate=YYYYMMDD`,
-    `bookgCourse=ALL`) → HTML. `<tr>` 5칸(번호/코스/시간/홀/예약). 신청 가능 행에만
-    `<button class="btn btn-res" onclick="golfConfirm('YYYYMMDD','HHMM','courseCd','코스명',
-    'HH:MM','18홀',...)">신청</button>`. 예약 완료분은 표에 없음. 요금은 행에 안 보임
-    (golfConfirm 인자의 그린피가 '0','0'). 코스: 물길·꽃길·산길·숲길.
-  코스: 물길·꽃길·산길·숲길. → `parseCalendarDates` / `parseDaySlots`로 구현·테스트됨.
-- **봇 차단**: `lakewood-cdn.botnhuman.com` 비콘 + 예약 mainForm에 `macroChk`·
-  `verify_entity_id/ip/unique` 필드. 조사 중 반복 요청이 실제로 걸려
-  `botnhuman.com/macro.html`로 리다이렉트됐다(위 "결론" 참고).
-
-**대응 방향 / 남은 선택지**:
-- 안전 장치: `login()` 1회 실패 → `LoginFailedError` → `PAUSED_LOGIN_FAILED`(무한 재시도
-  없음). 봇 차단 페이지는 JSON이 아니므로 현재 `login()`은 이를 `TransientSiteError`로 처리
-  (계정 안 잠금, 다음 사이클 재시도) — 반복 차단이면 계정 노출이 계속되니 이 동작을 재검토할 것.
-- 활성화하려면: (a) 스캔 주기를 크게 늘려 봇 감지 회피(취소표를 놓칠 확률↑), (b) 세션 쿠키
-  수명이 길면 재로그인을 줄이도록 엔진에 세션 캐시 추가, (c) 로그인 실패 응답(success 값)을
-  실사이트로 확인. 셋 다 사용자 결정·추가 작업 필요.
+**엔드포인트 참고**:
+- 달력: `POST /reservation/ajax/golfCalendar`, 본문 `workMonth=YYYYMM` → HTML.
+  예약 가능일 = `<a class="cal_live" onclick="clickCal(cls,'A','YYYYMMDD','OPEN')">`.
+  마감 = `cal_end`/`cal_closed`, 오픈전 = 클래스 없음/`NOOPEN`.
+- 시간표: `POST /reservation/ajax/golfTimeList`, 본문 `workDate=YYYYMMDD`, `bookgCourse=ALL`
+  → HTML. `<tr>` 5칸(번호/코스/시간/홀/예약). 신청 가능 행에만 `<button class="btn btn-res"
+  onclick="golfConfirm('YYYYMMDD','HHMM','courseCd','코스명','HH:MM','18홀',...)">신청</button>`.
+  예약 완료분은 표에 없음. 요금 정보 없음(price=null). 코스: 물길·꽃길·산길·숲길.
+  → `parseCalendarDates` / `parseDaySlots`로 구현·테스트됨.
 
 ## GitHub Actions cron이 비공개 저장소 무료 한도를 초과함 (2026-08-30)
 

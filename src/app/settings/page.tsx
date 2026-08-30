@@ -249,6 +249,8 @@ function CredentialsSection({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const selectedLoginless = FACILITIES.find((f) => f.id === facilityId)?.loginless === true;
+
   useEffect(() => {
     if (!facilityId && availableFacilities[0]) setFacilityId(availableFacilities[0].id);
   }, [availableFacilities, facilityId]);
@@ -261,7 +263,9 @@ function CredentialsSection({
       const res = await fetch("/api/credentials", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ facilityId, loginId, password }),
+        body: JSON.stringify(
+          selectedLoginless ? { facilityId } : { facilityId, loginId, password }
+        ),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -284,9 +288,10 @@ function CredentialsSection({
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight text-text-primary">골프장 계정</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-text-primary">감시할 골프장</h2>
         <p className="mt-1 text-sm text-text-secondary">
-          등록한 계정으로 앱이 자동 로그인해서 취소표를 확인해요. 비밀번호는 암호화되어 저장돼요.
+          계정이 필요한 골프장은 등록한 계정으로 앱이 자동 로그인해 취소표를 확인해요(비밀번호는
+          암호화 저장). 일부 골프장은 로그인 없이 비회원 화면으로 감시해요.
         </p>
       </div>
 
@@ -314,21 +319,30 @@ function CredentialsSection({
               ))}
             </select>
           </Field>
-          <Field label="아이디" htmlFor="loginId">
-            <Input id="loginId" required value={loginId} onChange={(e) => setLoginId(e.target.value)} />
-          </Field>
-          <Field label="비밀번호" htmlFor="facility-password">
-            <Input
-              id="facility-password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </Field>
+          {selectedLoginless ? (
+            <p className="text-sm text-text-secondary">
+              이 골프장은 로그인 없이 감시해요. 계정 정보가 필요 없어요. 취소표가 뜨면 알림을
+              보내드리니, 알림에서 예약 페이지로 이동해 직접 로그인하고 예약하시면 돼요.
+            </p>
+          ) : (
+            <>
+              <Field label="아이디" htmlFor="loginId">
+                <Input id="loginId" required value={loginId} onChange={(e) => setLoginId(e.target.value)} />
+              </Field>
+              <Field label="비밀번호" htmlFor="facility-password">
+                <Input
+                  id="facility-password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </Field>
+            </>
+          )}
           {error ? <Alert tone="error">{error}</Alert> : null}
           <Button type="submit" disabled={submitting} className="w-fit">
-            {submitting ? "등록하는 중..." : "계정 등록"}
+            {submitting ? "등록하는 중..." : selectedLoginless ? "감시 추가" : "계정 등록"}
           </Button>
         </form>
       ) : null}
@@ -350,6 +364,9 @@ function CredentialRow({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const facility = FACILITIES.find((f) => f.id === credential.facilityId);
+  const loginless = facility?.loginless === true;
 
   async function handleUpdate(e: FormEvent) {
     e.preventDefault();
@@ -383,7 +400,7 @@ function CredentialRow({
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-text-primary">
-            {FACILITIES.find((f) => f.id === credential.facilityId)?.name ?? credential.facilityId}
+            {facility?.name ?? credential.facilityId}
           </p>
           {credential.status === "PAUSED_LOGIN_FAILED" ? (
             <p className="mt-1 flex items-center gap-1 text-xs text-danger">
@@ -391,23 +408,27 @@ function CredentialRow({
               로그인 실패로 감시가 중지됐어요.
             </p>
           ) : (
-            <p className="mt-1 text-xs text-text-secondary">정상 감시 중</p>
+            <p className="mt-1 text-xs text-text-secondary">
+              {loginless ? "감시 중 (로그인 없음)" : "정상 감시 중"}
+            </p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" onClick={() => setEditing((v) => !v)}>
-            계정 정보 갱신
-          </Button>
+          {loginless ? null : (
+            <Button variant="ghost" onClick={() => setEditing((v) => !v)}>
+              계정 정보 갱신
+            </Button>
+          )}
           <button
             onClick={() => onDelete(credential.id)}
-            aria-label="계정 삭제"
+            aria-label={loginless ? "감시 삭제" : "계정 삭제"}
             className="rounded-lg p-2 text-text-secondary transition hover:bg-danger-surface hover:text-danger"
           >
             <Trash size={16} />
           </button>
         </div>
       </div>
-      {editing ? (
+      {editing && !loginless ? (
         <form onSubmit={handleUpdate} className="flex flex-col gap-3 rounded-lg bg-surface-elevated p-3">
           <Field label="새 아이디 (변경 시에만 입력)" htmlFor={`loginId-${credential.id}`}>
             <Input id={`loginId-${credential.id}`} value={loginId} onChange={(e) => setLoginId(e.target.value)} />

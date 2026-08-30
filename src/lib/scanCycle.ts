@@ -84,10 +84,14 @@ async function processCredential(
   // 수 있으므로, 어느 단계에서 나든 같은 기준으로 분류해야 한다. 그 외 예상 못한 예외는 상위
   // (runScanCycle)의 credential 단위 try/catch가 격리한다.
   try {
-    const session = await adapter.login(
-      decryptSecret(credential.encryptedLoginId),
-      decryptSecret(credential.encryptedPassword)
-    );
+    // loginless 어댑터(예: 레이크우드 — 봇 차단 때문에 비로그인 감시)는 login()을 호출하지
+    // 않고 세션 없이 스캔한다. 자격증명(빈 값으로 저장돼 있음)도 복호화하지 않는다.
+    const session = adapter.loginless
+      ? { cookie: "" }
+      : await adapter.login(
+          decryptSecret(credential.encryptedLoginId),
+          decryptSecret(credential.encryptedPassword)
+        );
 
     // 이번에 신청 가능한 날짜 + 예전에 신청 가능하다고 기록해뒀던 날짜(완전히 마감돼 사라졌을
     // 수도 있으니 반드시 함께 확인) 를 합쳐서 스캔 대상 날짜로 삼는다.
