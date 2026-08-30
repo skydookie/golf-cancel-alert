@@ -3,12 +3,17 @@
 ## 최초 설정 순서
 
 ```bash
-npm install                        # 최초 1회 실행 시 postinstall 스크립트 승인이 필요할 수 있음
-                                    # (경고가 뜨면: npm approve-scripts <패키지들>, 다시 npm install)
+npm install                        # postinstall이 자동으로 `prisma generate`를 실행한다
+                                    # (스크립트 승인 경고가 뜨면: npm approve-scripts <패키지들>, 다시 npm install)
 cp .env.example .env                # 아래 "환경변수" 항목을 채운다
 npx prisma migrate dev              # PostgreSQL에 테이블 생성 (DATABASE_URL이 먼저 유효해야 함)
 npm run dev                         # http://localhost:3000
 ```
+
+> `npm install` 없이 소스만 받은 상태에서는 Prisma Client 타입이 생성되지 않아
+> `npm run typecheck` / `npm run build`가 `implicitly has an 'any' type` 에러를 낸다 —
+> `npm install`(또는 `npm run prisma:generate`)을 먼저 실행하면 해소된다. Vercel 빌드는
+> `postinstall`이 이를 처리한다.
 
 `npx web-push generate-vapid-keys`로 VAPID 공개/비공개 키 쌍을 만들어 `VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`(공개키와 동일 값)에 채운다 — 이 단계 없이는
