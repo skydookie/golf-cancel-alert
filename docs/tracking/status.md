@@ -25,15 +25,19 @@
   단색 PNG.
 - GitHub Actions 스케줄 워크플로 작성 — 실제 배포 환경에서 실행해본 적은 없음(로컬에서
   워크플로 문법만 확인 가능).
+- 초기 DB 마이그레이션(`prisma/migrations/0_init`) — 스키마에서 오프라인 생성(`migrate diff`),
+  `prisma validate` 통과. 실제 PostgreSQL에 `migrate deploy`로 적용해본 적은 없음.
+- Vercel 배포 — GitHub 연결됨, 프로덕션 **빌드 성공(Ready)**. 단 환경변수/DB 미설정이라
+  런타임은 아직 동작 안 함. `postinstall: prisma generate` 추가로 빌드가 통과하게 됨.
 
 ## 빌드는 됐지만 검증 안 된 부분 (완료로 세지 않음)
 
 - `/login`, `/signup`, `/schedule`, `/settings` 화면의 폼 제출 흐름은 **로컬 프로덕션
   빌드(`next build && next start`) 위에서 수동 curl 스모크로만 확인**했다(정적 렌더링, 비로그인
   리다이렉트, API 401 응답까지만) — 실제 브라우저로 폼을 채워 제출하는 e2e 테스트는 없다.
-- 실제 PostgreSQL에 대한 마이그레이션(`prisma migrate dev`) 자체는 실행해본 적 없다(테스트는
-  전부 Prisma client를 mock). 스키마가 실제 PostgreSQL에 문제없이 적용되는지는 배포 시 최초
-  확인이 필요하다.
+- 초기 마이그레이션 파일은 이제 저장소에 있으나(`prisma/migrations/0_init`), 실제
+  PostgreSQL에 `migrate deploy`로 적용해본 적은 없다(테스트는 전부 Prisma client를 mock).
+  빈 DB에 문제없이 적용되는지는 배포 시 최초 확인이 필요하다.
 - 실제 VAPID 키/실제 브라우저로 웹푸시 수신까지 가는 end-to-end 확인은 하지 않았다(발송
   함수 자체의 로직만 mock으로 검증).
 

@@ -37,7 +37,7 @@ model FacilityCredential {
   id                String            @id @default(cuid())
   userId            String
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  facilityId        String // 예: "laviebelle-old", "laviebelle-new" — 사이트-어댑터 식별자
+  facilityId        String // 예: "laviebelle-old", "laviebelle-dunes" — 사이트-어댑터 식별자
   encryptedLoginId  String
   encryptedPassword String
   status            CredentialStatus  @default(ACTIVE)
