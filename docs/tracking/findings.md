@@ -1,5 +1,34 @@
 # findings.md — 미해결 문제
 
+## 레이크우드(lakewood.co.kr) 어댑터 — 봇 차단 + 로그인 파라미터 미확인 (2026-08-30)
+
+**상황**: 사용자가 레이크우드CC 추가를 요청. 실사이트 조사 결과:
+- **스캔 경로는 완전히 파악됨**(세션 쿠키만 있으면 raw fetch로 동작 확인):
+  - 달력: `POST /reservation/ajax/golfCalendar` (mainForm serialize, `workMonth=YYYYMM`)
+    → HTML. 예약 가능일 = `<a class="cal_live" onclick="clickCal(cls,'A','YYYYMMDD','OPEN')">`.
+    마감 = `cal_end`/`cal_closed`, 오픈전 = 클래스 없음/`NOOPEN`.
+  - 시간표: `POST /reservation/ajax/golfTimeList` (mainForm serialize, `workDate=YYYYMMDD`,
+    `bookgCourse=ALL`) → HTML. `<tr>` 5칸(번호/코스/시간/홀/예약). 신청 가능 행에만
+    `<button class="btn btn-res" onclick="golfConfirm('YYYYMMDD','HHMM','courseCd','코스명',
+    'HH:MM','18홀',...)">신청</button>`. 예약 완료분은 표에 없음. 요금은 행에 안 보임
+    (golfConfirm 인자의 그린피가 '0','0'). 코스: 물길·꽃길·산길·숲길.
+- **로그인 경로는 불완전**:
+  - `POST /controller/MemberController.asp` 폼: `method=doLogin`, `coDiv=<globals.coDiv>`,
+    `id`, `pw` → JSON `{resultCode:"0000"}` = 성공. **`coDiv` 값을 못 찾음**(예약 페이지엔
+    `globals`/`mAjax`가 정의 안 됨 — 헤더 로그인 위젯이 있는 페이지에만 있음). 신라CC
+    (sillacc.co.kr)와 공유하는 예약 플랫폼이라 `coDiv`는 골프장 식별 코드로 추정.
+  - **봇 차단 존재**: `lakewood-cdn.botnhuman.com`("bot n human") 비콘 + 예약 mainForm에
+    `macroChk`·`verify_entity_id/ip/unique` 필드. 5분마다 raw fetch 로그인이 감지·차단되거나
+    실제 회원 계정이 잠길 위험이 있다(스캔 읽기는 영향 없어 보임 — 로그인만 노출).
+
+**대응 방향**:
+- 안전 장치는 이미 있음: `login()` 1회 실패 → `LoginFailedError` → `PAUSED_LOGIN_FAILED`
+  (무한 재시도 없음). 계정 잠김 위험은 이걸로 제한됨.
+- `coDiv`는 사용자가 실사이트에서 로그아웃→로그인하며 개발자도구 Network 탭의
+  `MemberController.asp` 요청 payload를 캡처해주면 확정 가능.
+- 라비에벨 세션 쿠키 수명이 길면 재로그인이 드물어 봇 감지 노출도 줄어든다 — 레이크우드도
+  세션 수명 확인 필요(현재 엔진은 매 스캔 사이클마다 로그인).
+
 ## GitHub Actions cron이 비공개 저장소 무료 한도를 초과함 (2026-08-30)
 
 **증상**: `skydookie/golf-cancel-alert`는 **비공개** 저장소다. GitHub Free 플랜의 비공개
