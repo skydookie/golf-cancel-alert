@@ -8,8 +8,9 @@ export interface FacilityMeta {
 
 export const FACILITIES: FacilityMeta[] = [
   { id: "laviebelle-old", name: "라비에벨 올드코스" },
-  // "laviebelle-new"(뉴코스)는 실사이트 조사로 존재/구조가 확인되면 추가한다(구조가 다르면
-  // 별도 어댑터로).
+  // 듄스코스는 올드코스와 경로 접두사(/dunescourse)만 다르고 로그인·달력·시간표 구조가 완전히
+  // 동일하다(2026-08-30 실사이트 확인) — 같은 어댑터 구현을 코스 설정만 바꿔 재사용한다.
+  { id: "laviebelle-dunes", name: "라비에벨 듄스코스" },
 ];
 
 export const FACILITY_IDS = FACILITIES.map((f) => f.id);

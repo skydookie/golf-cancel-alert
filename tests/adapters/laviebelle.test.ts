@@ -8,7 +8,12 @@ import {
   extractShellContext,
   yyyymmOf,
   nextYyyymm,
+  createLaviebelleAdapter,
+  laviebelleOldCourseAdapter,
+  laviebelleDunesCourseAdapter,
 } from "@/lib/adapters/laviebelle";
+import { getAdapter } from "@/lib/adapters/registry";
+import { FACILITY_IDS } from "@/lib/facilities";
 
 // laviebelle-calendar.html / laviebelle-day.html / laviebelle-reservation-shell.html은 모두
 // 실제 사이트에서 캡처한 HTML이다 — 각 파일 상단 주석 참고.
@@ -52,6 +57,11 @@ describe("parseDaySlotsHtml (실제 캡처본 fixture 사용)", () => {
     ]);
   });
 
+  it("facilityId 인자를 주면 슬롯의 facilityId가 그 값으로 찍힌다(듄스코스 등)", () => {
+    const slots = parseDaySlotsHtml(fixture("laviebelle-day.html"), "2026-08-29", "laviebelle-dunes");
+    expect(slots.map((s) => s.facilityId)).toEqual(["laviebelle-dunes", "laviebelle-dunes"]);
+  });
+
   it("헤더 행(<th>만 있음)은 자연히 걸러진다", () => {
     const headerOnlyHtml = `<table><tbody><tr><th>번호</th><th>코스</th><th>시간</th><th>일반요금</th><th>예약</th></tr></tbody></table>`;
     expect(parseDaySlotsHtml(headerOnlyHtml, "2026-08-30")).toEqual([]);
@@ -71,6 +81,31 @@ describe("extractShellContext (실제 캡처본 fixture 사용)", () => {
 
   it("필수 숨은 필드가 없으면 TransientSiteError를 던진다", () => {
     expect(() => extractShellContext("<html><body>빈 페이지</body></html>")).toThrow();
+  });
+});
+
+describe("코스별 어댑터(올드코스 / 듄스코스)", () => {
+  it("두 코스 어댑터는 각자의 facilityId를 갖고, buildDeepLink는 코스별 경로의 예약 셸 URL을 반환한다", () => {
+    expect(laviebelleOldCourseAdapter.facilityId).toBe("laviebelle-old");
+    expect(laviebelleDunesCourseAdapter.facilityId).toBe("laviebelle-dunes");
+    expect(laviebelleOldCourseAdapter.buildDeepLink("2026-08-29")).toBe(
+      "https://www.lavieestbellegolfnresort.com/oldcourse/_mobile/GolfRes/onepage/real_reservation.asp"
+    );
+    expect(laviebelleDunesCourseAdapter.buildDeepLink("2026-08-29")).toBe(
+      "https://www.lavieestbellegolfnresort.com/dunescourse/_mobile/GolfRes/onepage/real_reservation.asp"
+    );
+  });
+
+  it("registry가 두 코스 어댑터를 모두 facilityId로 돌려주고, facilities 목록과 일치한다", () => {
+    expect(getAdapter("laviebelle-old")).toBe(laviebelleOldCourseAdapter);
+    expect(getAdapter("laviebelle-dunes")).toBe(laviebelleDunesCourseAdapter);
+    expect(FACILITY_IDS).toContain("laviebelle-old");
+    expect(FACILITY_IDS).toContain("laviebelle-dunes");
+  });
+
+  it("createLaviebelleAdapter는 임의 코스 설정으로도 어댑터를 만든다", () => {
+    const adapter = createLaviebelleAdapter({ facilityId: "x", coursePath: "/oldcourse" });
+    expect(adapter.facilityId).toBe("x");
   });
 });
 

@@ -32,9 +32,19 @@
 
 `laviebelle.ts`는 로그인 폼 필드명/제출 경로, "셸 페이지 GET → AJAX 엔드포인트 POST" 2단계
 구조, 달력·날짜별 시간표 AJAX 응답 조각의 실제 마크업(`parseCalendarHtml`/`parseCalendarDays`/
-`parseDaySlotsHtml`), 날짜별 openyn/dategbn 값까지 전부 실사이트 캡처로 확인됐다. 유일하게
-남은 미확인 항목은 `login_ok.asp`의 로그인 성공/실패 신호 방식이다. 이 파일을 수정할 때는
-상단 주석의 "확인된 것"/"아직 확인 안 된 것" 구분과 "⚠️" 경고를 먼저 읽는다.
+`parseDaySlotsHtml`), 날짜별 openyn/dategbn 값까지 전부 실사이트 캡처로 확인됐다.
+
+라비에벨 리조트는 코스가 둘(올드코스 `/oldcourse`, 듄스코스 `/dunescourse`)이고 두 코스의
+예약 화면은 경로 접두사만 다르고 구조가 완전히 동일하다(2026-08-30 확인). 그래서
+`laviebelle.ts`는 코스 설정(`coursePath`, `facilityId`)만 받는 팩토리
+`createLaviebelleAdapter`로 구현되고, 파일 하단에서 `laviebelleOldCourseAdapter`(`laviebelle-old`)
+와 `laviebelleDunesCourseAdapter`(`laviebelle-dunes`) 두 인스턴스를 export 한다. **같은
+사이트의 다른 코스를 추가할 때는 새 파일이 아니라 이 팩토리에 인스턴스를 하나 더 추가한다**
+(별도 파일 규칙은 "다른 사이트"에만 적용).
+
+남은 미확인 항목: (1) `login_ok.asp`의 로그인 성공/실패 신호 방식, (2) 코스 간 세션 쿠키
+공유 여부. 이 파일을 수정할 때는 상단 주석의 "확인된 것"/"아직 확인 안 된 것" 구분과
+"⚠️" 경고를 먼저 읽는다.
 
 ## 테스트 가이드
 

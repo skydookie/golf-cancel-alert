@@ -3,12 +3,20 @@ import type { AvailableSlot, SiteAdapter, SiteSession } from "@/lib/adapters/typ
 import { LoginFailedError, TransientSiteError } from "@/lib/adapters/types";
 
 // ─────────────────────────────────────────────────────────────────────────
-// 라비에벨 올드코스 사이트-어댑터
+// 라비에벨 사이트-어댑터 (올드코스 + 듄스코스)
+//
+// 라비에벨 리조트에는 코스가 둘 있다 — 올드코스(`/oldcourse`)와 듄스코스(`/dunescourse`).
+// (2026-08-30 실사이트 확인) 두 코스의 예약 화면은 경로 접두사만 다르고 로그인 폼·숨은 필드·
+// "셸 GET → AJAX POST" 2단계 구조·달력/시간표 응답 마크업이 완전히 동일하다. 그래서 이
+// 파일은 코스별 설정(`coursePath`, `facilityId`)만 받아 같은 어댑터를 찍어내는 팩토리
+// (`createLaviebelleAdapter`)로 구현하고, 파일 하단에서 두 코스의 어댑터 인스턴스를 export 한다.
+// `newcourse` 경로는 실사이트에서 에러 페이지(error.jpg)만 반환하는 죽은 경로다 — 존재하지 않음.
 //
 // [실사이트 HTML로 확인된 것]
 //   - (2026-08-28, 로그인 전 상태의 예약 화면 "페이지 소스 보기") 로그인 폼(퀵로그인,
-//     #frmQuickLogin): method=POST, action=/oldcourse/_mobile/login/login_ok.asp, 필드명
-//     mem_id(아이디/휴대폰번호), usr_pwd(비밀번호).
+//     #frmQuickLogin): method=POST, action=<coursePath>/_mobile/login/login_ok.asp, 필드명
+//     mem_id(아이디/휴대폰번호), usr_pwd(비밀번호). (2026-08-30 듄스코스도 동일 — action만
+//     `/dunescourse/_mobile/login/login_ok.asp`.)
 //   - (동일 캡처) 예약 캘린더 화면(real_reservation.asp) 자체는 달력·시간표 데이터를 담고
 //     있지 않다. 화면 로드시 인라인 스크립트가 숨은 폼을 채운 뒤 jQuery AJAX POST로 별도 .asp
 //     엔드포인트를 불러 그 응답 HTML을 그대로 화면에 끼워 넣는 구조다(서버 렌더링 + 클라이언트
@@ -18,11 +26,14 @@ import { LoginFailedError, TransientSiteError } from "@/lib/adapters/types";
 //          (필드: golfrestype=real, schDate=YYYYMM, usrmemcd, toDay=YYYYMMDD, calnum=1|2)
 //       2) 날짜별 시간표: POST ./real_timeinfo_ajax_from.asp
 //          (필드: golfrestype=real, courseid, usrmemcd, pointdate=YYYYMMDD, openyn, dategbn,
-//          choice_time, pointdatechk, inputtype=I)
-//     경로는 모두 /oldcourse/_mobile/GolfRes/onepage/ 기준 상대경로.
+//          choice_time, cssncourseum, pointdatechk, inputtype=I)
+//     경로는 모두 <coursePath>/_mobile/GolfRes/onepage/ 기준 상대경로.
+//     (2026-08-30 확인) 시간표 폼(#listform_timeform)의 실제 필드 순서는
+//     golfrestype·courseid·usrmemcd·pointdate·openyn·dategbn·choice_time·cssncourseum(빈 값)·
+//     pointdatechk·inputtype 이다 — cssncourseum은 항상 빈 문자열로 관측돼 함께 빈 값으로 보낸다.
 //   - usrmemcd(회원 코드로 추정)는 매 AJAX 호출에 실려가며 셸 페이지의 숨은 필드에서 읽어와야
 //     한다(로그인한 회원마다 값이 다를 수 있어 하드코딩하지 않는다 — 회원 등급별로 잔여
-//     시간표가 다르다는 도메인 전제와도 일치한다).
+//     시간표가 다르다는 도메인 전제와도 일치한다. 비로그인 상태에서는 "10"이 기본값).
 //   - (2026-08-28, 로그인 상태에서 개발자도구 Elements 탭 → 시간표 `<table>`의 outerHTML로
 //     확보 — real_timeinfo_ajax_from.asp 응답 조각) 시간표 행 구조: `<td>` 5개(번호/코스/
 //     시간/일반요금/예약) 순서, 신청 가능한 행에만 `id="timeresbtn_..."`인 `<a>`가 있고 그
@@ -32,32 +43,58 @@ import { LoginFailedError, TransientSiteError } from "@/lib/adapters/types";
 //     pointname, bookgdatekor, bookghole, flagtype, punish_cd, greenfee_base, greenfee_dis,
 //     ...)"` 호출 인자 중 `greenfee_dis`에만 있다. 셀 텍스트만 파싱하면 알림에 실제보다 비싼
 //     요금이 들어간다 — `parseDaySlotsHtml`은 이 인자에서 가격을 뽑는다.
-//   - (2026-08-28, 로그인 상태에서 개발자도구 Elements 탭 → 달력 `<table>`의 outerHTML로
-//     확보 — real_calendar_ajax_view.asp 응답 조각) 각 날짜 칸(`<td>`)은 `<a
+//   - (2026-08-28 및 2026-08-30, 달력 `<table>` outerHTML / real_calendar_ajax_view.asp 응답
+//     조각으로 두 코스 모두 확인) 각 날짜 칸(`<td>`)은 `<a
 //     href="javascript:timefrom_change('YYYYMMDD','openyn','dategbn','','00','E'[,
 //     토큰])">일</a>`을 담고 있고, **그 날짜의 예약 가능 여부는 `<td>`의 첫 번째 자식 div의
 //     클래스가 "cm_liv"(예약 가능)인지 "cm_end"(마감/오픈전, 둘 다 동일 취급)인지로 판별한다**
 //     (빈 칸은 이 div에 클래스 자체가 없다). 날짜가 없는 칸에는 `<a>`가 아예 없다. 이로써
 //     날짜별 `openyn`/`dategbn`을 더 이상 추측하지 않아도 된다 — 달력 조각을 파싱할 때 각
 //     날짜의 실제 값을 함께 읽어 `scanDaySlots` 호출에 그대로 재사용한다(`LaviebelleSession.
-//     dayMeta` 참고). "오픈전" 전용 클래스(레이아웃의 주석 처리된 `cm_navi_open` 범례 참고)는
-//     아직 실제 데이터에서 관측되지 않았지만, "cm_liv"가 아닌 모든 값은 어차피 "신청 불가"로
-//     동일 취급하므로 판별 로직에 영향 없다.
+//     dayMeta` 참고).
+//   - (2026-08-30 확인) 달력의 날짜 링크 `timefrom_change()`는 URL을 바꾸지 않는다 — 숨은 폼
+//     (#listform_timeform)의 필드를 세팅한 뒤 `real_timeinfo_ajax_from.asp`로 AJAX POST 하고
+//     응답 조각을 화면에 끼워 넣을 뿐이다. **즉 특정 날짜 화면으로 바로 가는 URL(쿼리
+//     파라미터) 딥링크는 사이트 구조상 불가능하다** — `buildDeepLink`가 예약 캘린더 셸 URL만
+//     반환하는 것이 최선이며, 사용자는 그 화면에서 원하는 날짜를 한 번 더 클릭해야 한다.
 //
 // [아직 확인 안 된 것]
 //   - login_ok.asp가 로그인 성공/실패를 어떻게 신호하는지(리다이렉트 위치, 쿠키 유무, 별도
-//     에러 파라미터 등) — 처리 스크립트(common.js/loginfrom.js)가 아직 확보되지 않았다.
+//     에러 파라미터 등). 로그인 폼은 순수 form submit이고 성공/실패 판정은 서버(classic ASP)
+//     응답에 들어 있어, 실제 로그인 실패 시도의 응답을 캡처해야만 확인된다.
+//   - 올드코스에서 받은 세션 쿠키가 듄스코스 요청에도 유효한지(도메인 전역 쿠키인지, 코스별
+//     로그인이 따로 필요한지). 현재 어댑터는 코스별로 각자 login()을 호출하므로 동작에는
+//     문제없지만, 회원 계정이 두 코스에서 공유되는지는 미확인이다.
 //
 // ⚠️ 위 미확인 항목이 실제와 다르면 로그인 실패를 성공으로(또는 그 반대로) 오판할 수 있다.
 // 실제 로그인 실패 시도의 응답(리다이렉트 위치/쿠키 유무)을 확보하면 `login()`을 갱신한다.
 // ─────────────────────────────────────────────────────────────────────────
 
 const BASE_URL = "https://www.lavieestbellegolfnresort.com";
-const ONEPAGE_PATH = "/oldcourse/_mobile/GolfRes/onepage";
-const CALENDAR_SHELL_PATH = `${ONEPAGE_PATH}/real_reservation.asp`;
-const CALENDAR_AJAX_PATH = `${ONEPAGE_PATH}/real_calendar_ajax_view.asp`;
-const DAY_TIME_AJAX_PATH = `${ONEPAGE_PATH}/real_timeinfo_ajax_from.asp`;
-const LOGIN_PATH = "/oldcourse/_mobile/login/login_ok.asp";
+
+/** 코스별로 달라지는 것은 경로 접두사와 facilityId 뿐이다. */
+export interface LaviebelleCourseConfig {
+  facilityId: string;
+  /** 예: "/oldcourse", "/dunescourse" (앞에 슬래시, 뒤에 슬래시 없음) */
+  coursePath: string;
+}
+
+interface CoursePaths {
+  calendarShell: string;
+  calendarAjax: string;
+  dayTimeAjax: string;
+  login: string;
+}
+
+function pathsFor(coursePath: string): CoursePaths {
+  const onepage = `${coursePath}/_mobile/GolfRes/onepage`;
+  return {
+    calendarShell: `${onepage}/real_reservation.asp`,
+    calendarAjax: `${onepage}/real_calendar_ajax_view.asp`,
+    dayTimeAjax: `${onepage}/real_timeinfo_ajax_from.asp`,
+    login: `${coursePath}/_mobile/login/login_ok.asp`,
+  };
+}
 
 export interface CalendarDayInfo {
   date: string; // YYYY-MM-DD
@@ -100,7 +137,11 @@ export function parseCalendarHtml(html: string): string[] {
     .map((d) => d.date);
 }
 
-export function parseDaySlotsHtml(html: string, date: string): AvailableSlot[] {
+export function parseDaySlotsHtml(
+  html: string,
+  date: string,
+  facilityId = "laviebelle-old"
+): AvailableSlot[] {
   const $ = cheerio.load(html);
   const slots: AvailableSlot[] = [];
 
@@ -124,7 +165,7 @@ export function parseDaySlotsHtml(html: string, date: string): AvailableSlot[] {
     // 들어간다(위 상단 주석 참고).
     const price = extractDiscountedPrice(applyLink.attr("href") ?? "") ?? parsePriceFromCellText($(cells[3]).text());
 
-    slots.push({ facilityId: "laviebelle-old", date, course, time, price });
+    slots.push({ facilityId, date, course, time, price });
   });
 
   return slots;
@@ -193,10 +234,10 @@ function extractCookies(response: Response): string {
   return cookies.map((c) => c.split(";")[0]).join("; ");
 }
 
-async function fetchShellContext(cookie: string): Promise<ShellContext> {
+async function fetchShellContext(shellPath: string, cookie: string): Promise<ShellContext> {
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${CALENDAR_SHELL_PATH}`, { headers: { cookie } });
+    response = await fetch(`${BASE_URL}${shellPath}`, { headers: { cookie } });
   } catch (err) {
     throw new TransientSiteError(`예약 화면 조회 중 네트워크 오류: ${(err as Error).message}`);
   }
@@ -223,97 +264,117 @@ async function postAjaxFragment(path: string, cookie: string, body: Record<strin
   return response.text();
 }
 
-export const laviebelleOldCourseAdapter: SiteAdapter = {
-  facilityId: "laviebelle-old",
+/** 코스 설정을 받아 라비에벨 어댑터 인스턴스를 만든다(올드코스/듄스코스 공통 구현). */
+export function createLaviebelleAdapter(config: LaviebelleCourseConfig): SiteAdapter {
+  const paths = pathsFor(config.coursePath);
 
-  async login(loginId, password): Promise<SiteSession> {
-    let response: Response;
-    try {
-      response = await fetch(`${BASE_URL}${LOGIN_PATH}`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ mem_id: loginId, usr_pwd: password }).toString(),
-        redirect: "manual",
+  return {
+    facilityId: config.facilityId,
+
+    async login(loginId, password): Promise<SiteSession> {
+      let response: Response;
+      try {
+        response = await fetch(`${BASE_URL}${paths.login}`, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ mem_id: loginId, usr_pwd: password }).toString(),
+          redirect: "manual",
+        });
+      } catch (err) {
+        throw new TransientSiteError(`로그인 요청 중 네트워크 오류: ${(err as Error).message}`);
+      }
+
+      const cookie = extractCookies(response);
+      // login_ok.asp가 성공/실패를 정확히 어떻게 신호하는지 실사이트로 확인되지 않았다(상단 주석
+      // 참고) — 쿠키가 발급되지 않았거나 로그인 화면으로 되돌아가는 리다이렉트를 실패 신호로
+      // 우선 간주한다.
+      if (
+        !cookie ||
+        (response.status >= 300 &&
+          response.status < 400 &&
+          (response.headers.get("location") ?? "").includes("login"))
+      ) {
+        throw new LoginFailedError();
+      }
+      if (response.status >= 500) {
+        throw new TransientSiteError(`사이트 오류(HTTP ${response.status})`);
+      }
+
+      return { cookie };
+    },
+
+    async scanBookableDates(session): Promise<string[]> {
+      const ctx = await fetchShellContext(paths.calendarShell, session.cookie);
+      const thisMonth = yyyymmOf(ctx.toDay);
+      const nextMonth = nextYyyymm(ctx.toDay);
+
+      // 실사이트는 화면에 두 달치 달력을 보여준다(calnum=1: 이번 달, calnum=2: 다음 달).
+      const [fragment1, fragment2] = await Promise.all([
+        postAjaxFragment(paths.calendarAjax, session.cookie, {
+          golfrestype: "real",
+          schDate: thisMonth,
+          usrmemcd: ctx.usrmemcd,
+          toDay: ctx.toDay,
+          calnum: "1",
+        }),
+        postAjaxFragment(paths.calendarAjax, session.cookie, {
+          golfrestype: "real",
+          schDate: nextMonth,
+          usrmemcd: ctx.usrmemcd,
+          toDay: ctx.toDay,
+          calnum: "2",
+        }),
+      ]);
+
+      const days = [...parseCalendarDays(fragment1), ...parseCalendarDays(fragment2)];
+
+      // scanDaySlots가 날짜별 실제 openyn/dategbn을 재사용할 수 있도록 세션에 캐싱한다(위
+      // LaviebelleSession 주석 참고).
+      (session as LaviebelleSession).dayMeta = new Map(
+        days.map((d) => [d.date, { openyn: d.openyn, dategbn: d.dategbn }])
+      );
+
+      return days.filter((d) => d.bookable).map((d) => d.date);
+    },
+
+    async scanDaySlots(session, date): Promise<AvailableSlot[]> {
+      const ctx = await fetchShellContext(paths.calendarShell, session.cookie);
+      const pointdate = date.replace(/-/g, "");
+      const meta = (session as LaviebelleSession).dayMeta?.get(date);
+
+      const fragment = await postAjaxFragment(paths.dayTimeAjax, session.cookie, {
+        golfrestype: "real",
+        courseid: "0",
+        usrmemcd: ctx.usrmemcd,
+        pointdate,
+        // scanBookableDates가 먼저 이 날짜의 실제 openyn/dategbn을 읽어뒀으면 그 값을 쓴다.
+        // 못 찾은 경우(예: DB에는 남아있지만 이번 달력 조회 범위 밖으로 밀려난 날짜)에만 "오늘"
+        // 기본값으로 대체한다 — 이 fallback 경로는 실사이트로 검증되지 않았다.
+        openyn: meta?.openyn ?? "1",
+        dategbn: meta?.dategbn ?? "6",
+        choice_time: "00",
+        cssncourseum: "",
+        pointdatechk: "",
+        inputtype: "I",
       });
-    } catch (err) {
-      throw new TransientSiteError(`로그인 요청 중 네트워크 오류: ${(err as Error).message}`);
-    }
 
-    const cookie = extractCookies(response);
-    // login_ok.asp가 성공/실패를 정확히 어떻게 신호하는지 실사이트로 확인되지 않았다(상단 주석
-    // 참고) — 쿠키가 발급되지 않았거나 로그인 화면으로 되돌아가는 리다이렉트를 실패 신호로
-    // 우선 간주한다.
-    if (!cookie || (response.status >= 300 && response.status < 400 && (response.headers.get("location") ?? "").includes("login"))) {
-      throw new LoginFailedError();
-    }
-    if (response.status >= 500) {
-      throw new TransientSiteError(`사이트 오류(HTTP ${response.status})`);
-    }
+      return parseDaySlotsHtml(fragment, date, config.facilityId);
+    },
 
-    return { cookie };
-  },
+    buildDeepLink(): string {
+      // (2026-08-30 확인) 달력의 날짜 링크는 URL을 바꾸지 않고 숨은 폼 세팅 + AJAX POST만
+      // 한다 — 날짜별 직접 링크는 사이트 구조상 불가능하므로 예약 캘린더 셸 화면 URL을 반환한다.
+      return `${BASE_URL}${paths.calendarShell}`;
+    },
+  };
+}
 
-  async scanBookableDates(session): Promise<string[]> {
-    const ctx = await fetchShellContext(session.cookie);
-    const thisMonth = yyyymmOf(ctx.toDay);
-    const nextMonth = nextYyyymm(ctx.toDay);
+export const laviebelleOldCourseAdapter = createLaviebelleAdapter({
+  facilityId: "laviebelle-old",
+  coursePath: "/oldcourse",
+});
 
-    // 실사이트는 화면에 두 달치 달력을 보여준다(calnum=1: 이번 달, calnum=2: 다음 달).
-    const [fragment1, fragment2] = await Promise.all([
-      postAjaxFragment(CALENDAR_AJAX_PATH, session.cookie, {
-        golfrestype: "real",
-        schDate: thisMonth,
-        usrmemcd: ctx.usrmemcd,
-        toDay: ctx.toDay,
-        calnum: "1",
-      }),
-      postAjaxFragment(CALENDAR_AJAX_PATH, session.cookie, {
-        golfrestype: "real",
-        schDate: nextMonth,
-        usrmemcd: ctx.usrmemcd,
-        toDay: ctx.toDay,
-        calnum: "2",
-      }),
-    ]);
-
-    const days = [...parseCalendarDays(fragment1), ...parseCalendarDays(fragment2)];
-
-    // scanDaySlots가 날짜별 실제 openyn/dategbn을 재사용할 수 있도록 세션에 캐싱한다(위
-    // LaviebelleSession 주석 참고).
-    (session as LaviebelleSession).dayMeta = new Map(
-      days.map((d) => [d.date, { openyn: d.openyn, dategbn: d.dategbn }])
-    );
-
-    return days.filter((d) => d.bookable).map((d) => d.date);
-  },
-
-  async scanDaySlots(session, date): Promise<AvailableSlot[]> {
-    const ctx = await fetchShellContext(session.cookie);
-    const pointdate = date.replace(/-/g, "");
-    const meta = (session as LaviebelleSession).dayMeta?.get(date);
-
-    const fragment = await postAjaxFragment(DAY_TIME_AJAX_PATH, session.cookie, {
-      golfrestype: "real",
-      courseid: "0",
-      usrmemcd: ctx.usrmemcd,
-      pointdate,
-      // scanBookableDates가 먼저 이 날짜의 실제 openyn/dategbn을 읽어뒀으면 그 값을 쓴다.
-      // 못 찾은 경우(예: DB에는 남아있지만 이번 달력 조회 범위 밖으로 밀려난 날짜)에만 "오늘"
-      // 기본값으로 대체한다 — 이 fallback 경로는 실사이트로 검증되지 않았다.
-      openyn: meta?.openyn ?? "1",
-      dategbn: meta?.dategbn ?? "6",
-      choice_time: "00",
-      pointdatechk: "",
-      inputtype: "I",
-    });
-
-    return parseDaySlotsHtml(fragment, date);
-  },
-
-  buildDeepLink(): string {
-    // 날짜별 직접 링크가 실사이트에서 실제로 가능한지 확인되지 않아, 현재는 안전한 기본값으로
-    // 캘린더 셸 화면 URL만 반환한다. 실사이트가 날짜를 쿼리 파라미터로 받는 구조임이 확인되면
-    // 이 함수가 해당 날짜의 URL을 직접 구성하도록 바꾼다.
-    return `${BASE_URL}${CALENDAR_SHELL_PATH}`;
-  },
-};
+export const laviebelleDunesCourseAdapter = createLaviebelleAdapter({
+  facilityId: "laviebelle-dunes",
+  coursePath: "/dunescourse",
+});
