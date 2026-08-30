@@ -14,13 +14,15 @@
 ## 남은 수동 단계
 
 ### 1. PostgreSQL 연결
-Vercel → 프로젝트 → **Storage → Connect Database** → Neon(무료 티어) 생성.
-→ `DATABASE_URL` 등이 프로젝트 환경변수에 자동 주입됨.
+Vercel → 프로젝트 → **Storage → Create Database → Neon**(무료) 생성, 모든 환경에 연결.
+→ `DATABASE_URL`, `DATABASE_URL_UNPOOLED` 등이 프로젝트 환경변수에 자동 주입됨.
 
-### 2. 환경변수 등록 (Vercel → Settings → Environment Variables, Production)
-로컬 `.env` 의 아래 키/값을 그대로 등록 (DATABASE_URL은 1번에서 자동):
-`SESSION_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
-`VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `CRON_SECRET`, `INVITE_CODE`
+### 2. 환경변수 등록 (Vercel → Settings → Environment Variables, 모든 환경)
+- `DIRECT_URL` = 1번에서 생긴 `DATABASE_URL_UNPOOLED` 값과 동일하게 새로 추가
+  (마이그레이션은 풀러를 거치지 않는 직결 연결로 실행해야 안전하다)
+- 로컬 `.env` 의 아래 키/값을 그대로 등록:
+  `SESSION_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+  `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `CRON_SECRET`, `INVITE_CODE`
 
 ### 3. 마이그레이션
 `vercel.json` 의 `buildCommand` 가 `prisma migrate deploy && next build` 라서, DATABASE_URL
@@ -29,9 +31,15 @@ Vercel → 프로젝트 → **Storage → Connect Database** → Neon(무료 티
 ### 4. 재배포
 Vercel → Deployments → 최신 → … → **Redeploy** (새 환경변수 반영 + 마이그레이션 실행).
 
-### 5. GitHub Actions 시크릿 (repo → Settings → Secrets and variables → Actions)
-- `APP_BASE_URL` = `https://golf-cancel-alert.vercel.app`
-- `CRON_SECRET` = `.env` 의 CRON_SECRET 과 동일 값
+### 5. 주기적 스캔 트리거 설정
+⚠️ 저장소가 비공개라 GitHub Actions 5분 cron은 무료 한도 초과(findings.md 참고). 택1:
+- **(권장) 저장소 공개 전환** — repo → Settings → General → Danger Zone → Change visibility →
+  Public. 그 다음 repo → Settings → Secrets and variables → Actions 에 등록:
+  - `APP_BASE_URL` = `https://golf-cancel-alert.vercel.app`
+  - `CRON_SECRET` = `.env` 의 CRON_SECRET 값
+- **또는 외부 cron**(cron-job.org 등): `https://golf-cancel-alert.vercel.app/api/cron/scan`
+  를 5분마다 **POST**, 헤더 `Authorization: Bearer <CRON_SECRET>` 추가. 이 경우 GitHub
+  Secrets/워크플로는 필요 없음.
 
 ### 6. 종단 간 스모크 (1회)
 1. `/signup` — INVITE_CODE 로 가입
