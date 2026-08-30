@@ -12,11 +12,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // 런타임 쿼리용 연결. 커넥션 풀러(PgBouncer 등)를 거쳐도 된다.
+  // 런타임 쿼리용 연결(커넥션 풀러 경유 가능). Neon-Vercel 통합이 자동 주입.
   url       = env("DATABASE_URL")
-  // 마이그레이션(prisma migrate deploy)용 직결 연결. 풀러는 DDL/어드바이저리 락에서
-  // 문제를 일으킬 수 있어 분리한다. 풀러를 안 쓰면 DATABASE_URL과 같은 값을 넣으면 된다.
-  directUrl = env("DIRECT_URL")
+  // 마이그레이션(prisma migrate deploy)용 직결 연결 — 풀러는 DDL/어드바이저리 락에서
+  // 문제를 낼 수 있어 분리한다. Neon-Vercel 통합이 DATABASE_URL_UNPOOLED로 자동 주입.
+  // (통합을 안 쓰는 환경/로컬에서는 DATABASE_URL과 같은 값을 넣으면 된다.)
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {

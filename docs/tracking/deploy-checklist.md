@@ -8,43 +8,39 @@
 - [x] Vercel 프로젝트 `golfrory/golf-cancel-alert` ↔ GitHub `skydookie/golf-cancel-alert` 연결
 - [x] 프로덕션 빌드 통과 (`postinstall: prisma generate` 추가로 해결)
 - [x] 초기 마이그레이션 `prisma/migrations/0_init` 저장소에 포함
-- [x] 로컬 `.env` 에 비밀값(SESSION_SECRET / CREDENTIAL_ENCRYPTION_KEY / VAPID / CRON_SECRET
-      / INVITE_CODE) 생성 완료 — **이 값들을 아래 단계에서 그대로 쓴다** (`.env`는 gitignore)
+- [x] **Neon Postgres 연결됨** — `neon-teal-dog`, `DATABASE_URL` / `DATABASE_URL_UNPOOLED`
+      포함해 Vercel 환경변수 자동 주입 (Production and Preview)
+- [x] **앱 비밀값 8개 Vercel에 등록됨** — `SESSION_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`,
+      `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+      `CRON_SECRET`, `INVITE_CODE` (2일 전 세션에서 설정). 로컬 `.env` 의 값과는 다를 수 있음 —
+      GitHub Secrets `CRON_SECRET` 은 **Vercel 값**과 맞춰야 함.
+- [x] `prisma migrate deploy` 는 `vercel.json` buildCommand 로 매 배포 시 자동 실행
 
 ## 남은 수동 단계
 
-### 1. PostgreSQL 연결
-Vercel → 프로젝트 → **Storage → Create Database → Neon**(무료) 생성, 모든 환경에 연결.
-→ `DATABASE_URL`, `DATABASE_URL_UNPOOLED` 등이 프로젝트 환경변수에 자동 주입됨.
+### 1. 최신 커밋으로 배포가 초록(Ready)인지 확인
+`directUrl` 을 `DATABASE_URL_UNPOOLED` 로 맞춘 커밋 이후의 배포가 성공했는지
+Vercel → Deployments 에서 확인. 빨간색이면 로그 열어서 원인 확인(대개 마이그레이션 단계).
 
-### 2. 환경변수 등록 (Vercel → Settings → Environment Variables, 모든 환경)
-- `DIRECT_URL` = 1번에서 생긴 `DATABASE_URL_UNPOOLED` 값과 동일하게 새로 추가
-  (마이그레이션은 풀러를 거치지 않는 직결 연결로 실행해야 안전하다)
-- 로컬 `.env` 의 아래 키/값을 그대로 등록:
-  `SESSION_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
-  `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `CRON_SECRET`, `INVITE_CODE`
+### 2. (배포 초록인데도 앱이 이상하면) 재배포
+Vercel → Deployments → 최신 → … → **Redeploy**.
 
-### 3. 마이그레이션
-`vercel.json` 의 `buildCommand` 가 `prisma migrate deploy && next build` 라서, DATABASE_URL
-이 있는 상태로 배포되면 마이그레이션이 자동 적용된다. 별도 수동 실행 불필요.
-
-### 4. 재배포
-Vercel → Deployments → 최신 → … → **Redeploy** (새 환경변수 반영 + 마이그레이션 실행).
-
-### 5. 주기적 스캔 트리거 설정
+### 3. 주기적 스캔 트리거 설정
 ⚠️ 저장소가 비공개라 GitHub Actions 5분 cron은 무료 한도 초과(findings.md 참고). 택1:
 - **(권장) 저장소 공개 전환** — repo → Settings → General → Danger Zone → Change visibility →
   Public. 그 다음 repo → Settings → Secrets and variables → Actions 에 등록:
   - `APP_BASE_URL` = `https://golf-cancel-alert.vercel.app`
-  - `CRON_SECRET` = `.env` 의 CRON_SECRET 값
+  - `CRON_SECRET` = **Vercel 에 등록된 `CRON_SECRET` 값과 동일하게** (로컬 `.env` 값 아님 —
+    Vercel Settings → Environment Variables 에서 확인)
 - **또는 외부 cron**(cron-job.org 등): `https://golf-cancel-alert.vercel.app/api/cron/scan`
   를 5분마다 **POST**, 헤더 `Authorization: Bearer <CRON_SECRET>` 추가. 이 경우 GitHub
   Secrets/워크플로는 필요 없음.
 
-### 6. 종단 간 스모크 (1회)
-1. `/signup` — INVITE_CODE 로 가입
+### 4. 종단 간 스모크 (1회)
+1. `/signup` — Vercel 의 `INVITE_CODE` 값으로 가입
 2. 골프장 계정(라비에벨) 등록 → 관심조건(날짜·시간대) 등록
 3. 휴대폰 브라우저에서 알림 권한 허용 → 구독
 4. GitHub Actions → "취소표 감시 스케줄러" workflow_dispatch 수동 실행 → 로그 200 확인
+   (또는 외부 cron 첫 실행 확인)
 5. 스캔 로그에서 라비에벨 로그인 성공/실패가 올바르게 판정되는지 확인
    (→ `findings.md` 의 `login_ok.asp` 신호 방식 미검증 이슈를 여기서 실측)
