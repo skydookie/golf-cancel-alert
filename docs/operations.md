@@ -45,9 +45,10 @@ npm run build        # next build
 ## 배포 절차 (Vercel 무료 티어 기준)
 
 1. 저장소를 Vercel에 연결. 위 환경변수를 전부 Vercel 프로젝트의 Environment Variables에 등록.
-2. `npx prisma migrate deploy`를 배포 파이프라인에 포함하거나, 최초 1회 로컬에서
-   `DATABASE_URL`을 프로덕션 DB로 바꿔 수동 실행. 초기 마이그레이션
-   (`prisma/migrations/0_init`)은 저장소에 이미 포함돼 있어 빈 DB에 바로 적용된다.
+2. 마이그레이션은 `vercel.json`의 `buildCommand`(`prisma migrate deploy && next build`)가
+   매 배포마다 자동 실행한다 — `DATABASE_URL`이 빌드 시점에 유효하기만 하면 된다. 초기
+   마이그레이션(`prisma/migrations/0_init`)은 저장소에 포함돼 있어 빈 DB에 바로 적용된다.
+   (Vercel 외 환경에 배포한다면 `npx prisma migrate deploy`를 직접 실행.)
 3. 저장소의 GitHub Secrets에 `APP_BASE_URL`(배포된 앱 주소)과 `CRON_SECRET`(`.env`와 동일한
    값)을 등록 — `.github/workflows/cron.yml`이 5분마다 `/api/cron/scan`을 호출한다(Vercel
    자체 Cron은 무료 티어에서 하루 1회로 제한되어 이 용도에 쓸 수 없어, 대신 GitHub Actions의

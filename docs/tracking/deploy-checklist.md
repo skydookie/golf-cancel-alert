@@ -22,17 +22,12 @@ Vercel → 프로젝트 → **Storage → Connect Database** → Neon(무료 티
 `SESSION_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
 `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `CRON_SECRET`, `INVITE_CODE`
 
-### 3. 마이그레이션 적용 (최초 1회)
-로컬에서 `.env` 의 `DATABASE_URL` 을 프로덕션(Neon) 값으로 잠깐 바꾼 뒤:
-```
-npx prisma migrate deploy
-```
-성공하면 원래 값으로 되돌린다. (또는 Vercel Build Command 를
-`prisma migrate deploy && next build` 로 바꿔 자동화 — 단 DATABASE_URL 이 빌드 시점에
-있어야 함. 원하면 `vercel.json` 에 `buildCommand` 로 커밋해도 됨.)
+### 3. 마이그레이션
+`vercel.json` 의 `buildCommand` 가 `prisma migrate deploy && next build` 라서, DATABASE_URL
+이 있는 상태로 배포되면 마이그레이션이 자동 적용된다. 별도 수동 실행 불필요.
 
 ### 4. 재배포
-Vercel → Deployments → 최신 → … → **Redeploy** (새 환경변수 반영).
+Vercel → Deployments → 최신 → … → **Redeploy** (새 환경변수 반영 + 마이그레이션 실행).
 
 ### 5. GitHub Actions 시크릿 (repo → Settings → Secrets and variables → Actions)
 - `APP_BASE_URL` = `https://golf-cancel-alert.vercel.app`
