@@ -15,17 +15,13 @@
       `CRON_SECRET`, `INVITE_CODE` (2일 전 세션에서 설정). 로컬 `.env` 의 값과는 다를 수 있음 —
       GitHub Secrets `CRON_SECRET` 은 **Vercel 값**과 맞춰야 함.
 - [x] `prisma migrate deploy` 는 `vercel.json` buildCommand 로 매 배포 시 자동 실행
+- [x] **프로덕션 배포 성공** (커밋 `1f40863`, Ready). buildCommand 가 `prisma migrate deploy`
+      를 성공적으로 실행 → **Neon DB에 스키마 적용 완료**.
+- [x] **앱 라이브** — https://golf-cancel-alert.vercel.app/signup 정상 렌더링 확인 (2026-08-30)
 
 ## 남은 수동 단계
 
-### 1. 최신 커밋으로 배포가 초록(Ready)인지 확인
-`directUrl` 을 `DATABASE_URL_UNPOOLED` 로 맞춘 커밋 이후의 배포가 성공했는지
-Vercel → Deployments 에서 확인. 빨간색이면 로그 열어서 원인 확인(대개 마이그레이션 단계).
-
-### 2. (배포 초록인데도 앱이 이상하면) 재배포
-Vercel → Deployments → 최신 → … → **Redeploy**.
-
-### 3. 주기적 스캔 트리거 설정
+### 1. 주기적 스캔 트리거 설정
 ⚠️ 저장소가 비공개라 GitHub Actions 5분 cron은 무료 한도 초과(findings.md 참고). 택1:
 - **(권장) 저장소 공개 전환** — repo → Settings → General → Danger Zone → Change visibility →
   Public. 그 다음 repo → Settings → Secrets and variables → Actions 에 등록:
@@ -36,7 +32,7 @@ Vercel → Deployments → 최신 → … → **Redeploy**.
   를 5분마다 **POST**, 헤더 `Authorization: Bearer <CRON_SECRET>` 추가. 이 경우 GitHub
   Secrets/워크플로는 필요 없음.
 
-### 4. 종단 간 스모크 (1회)
+### 2. 종단 간 스모크 (1회)
 1. `/signup` — Vercel 의 `INVITE_CODE` 값으로 가입
 2. 골프장 계정(라비에벨) 등록 → 관심조건(날짜·시간대) 등록
 3. 휴대폰 브라우저에서 알림 권한 허용 → 구독

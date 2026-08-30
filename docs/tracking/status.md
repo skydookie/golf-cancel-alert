@@ -27,8 +27,10 @@
   워크플로 문법만 확인 가능).
 - 초기 DB 마이그레이션(`prisma/migrations/0_init`) — 스키마에서 오프라인 생성(`migrate diff`),
   `prisma validate` 통과. 실제 PostgreSQL에 `migrate deploy`로 적용해본 적은 없음.
-- Vercel 배포 — GitHub 연결됨, 프로덕션 **빌드 성공(Ready)**. 단 환경변수/DB 미설정이라
-  런타임은 아직 동작 안 함. `postinstall: prisma generate` 추가로 빌드가 통과하게 됨.
+- Vercel 배포 — **프로덕션 라이브** (https://golf-cancel-alert.vercel.app). Neon Postgres
+  연결, 환경변수 전부 등록됨, `vercel.json` buildCommand 가 `prisma migrate deploy` 로
+  스키마를 실제 Neon DB에 적용 완료. signup 화면 렌더링 확인. 남은 것: 주기 스캔 트리거
+  (비공개 저장소라 GitHub Actions 한도 이슈 — findings.md 참고) + 종단 간 스모크 1회.
 
 ## 빌드는 됐지만 검증 안 된 부분 (완료로 세지 않음)
 
