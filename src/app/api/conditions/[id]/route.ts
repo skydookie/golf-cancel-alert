@@ -4,7 +4,7 @@ import { getUserIdFromRequest } from "@/lib/auth";
 import { jsonError } from "@/lib/api-helpers";
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const condition = await prisma.watchCondition.findUnique({ where: { id: params.id } });

@@ -23,7 +23,7 @@ beforeEach(() => {
 
 async function authedRequest() {
   const { signSessionToken } = await import("@/lib/auth");
-  const token = signSessionToken("u1");
+  const token = await signSessionToken("u1");
   return new NextRequest("http://localhost/api/schedule", { headers: { cookie: `session=${token}` } });
 }
 

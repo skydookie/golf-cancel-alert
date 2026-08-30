@@ -13,7 +13,7 @@ const subscribeSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const parsed = subscribeSchema.safeParse(await request.json().catch(() => null));
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 const unsubscribeSchema = z.object({ endpoint: z.string().url() });
 
 export async function DELETE(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const parsed = unsubscribeSchema.safeParse(await request.json().catch(() => null));

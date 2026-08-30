@@ -32,7 +32,7 @@ function toPublicShape(c: {
 }
 
 export async function GET(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const credentials = await prisma.facilityCredential.findMany({ where: { userId } });
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));

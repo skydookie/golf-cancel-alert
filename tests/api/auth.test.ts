@@ -127,7 +127,7 @@ describe("DELETE /api/auth/delete-account", () => {
 
   it("로그인한 요청은 User 레코드를 삭제한다(연쇄삭제는 스키마의 onDelete: Cascade가 담당)", async () => {
     const { signSessionToken } = await import("@/lib/auth");
-    const token = signSessionToken("u1");
+    const token = await signSessionToken("u1");
     prismaMock.user.delete.mockResolvedValue({ id: "u1" });
     const { DELETE } = await import("@/app/api/auth/delete-account/route");
     const req = new NextRequest("http://localhost/api/auth/delete-account", {

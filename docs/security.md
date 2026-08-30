@@ -4,17 +4,21 @@
 
 1. `/api/auth/signup` — 초대코드(`INVITE_CODE` 환경변수와 정확히 일치해야 함) 검증 → 실패 시
    403, 이메일 중복 검사는 실행되지 않음. 초대코드 통과 후 이메일 중복 검사 → 실패 시 409.
-   비밀번호는 bcrypt(round 12)로 해시해서 저장, 세션 쿠키 발급.
+   비밀번호는 bcrypt(round 10, bcryptjs)로 해시해서 저장, 세션 쿠키 발급.
 2. `/api/auth/login` — 이메일로 User 조회 → 없거나 비밀번호 불일치 시 **동일하게** 401(둘의
    메시지·상태코드를 구분하지 않음 — 존재하는 이메일 목록을 추측당하지 않기 위함).
 3. 세션은 `session` 쿠키(HttpOnly, `SameSite=Lax`, 프로덕션에서 `Secure`)에 담긴 JWT(HS256,
-   `SESSION_SECRET`로 서명, 30일 만료)다. 만료되거나 서명이 위조된 토큰은 `verifySessionToken`이
-   예외 없이 `null`을 반환 — 그 요청은 비로그인 취급.
-4. 모든 인증 필요 API는 `getUserIdFromRequest`로 세션 쿠키를 검증해 `userId`를 얻는다. 쿠키가
-   없거나 무효면 401.
-5. 미들웨어(`src/middleware.ts`)가 `/schedule`, `/settings` 접근 시 세션 쿠키의 **서명 유효성만**
-   검사해 리다이렉트한다(DB 조회는 하지 않음 — Edge 런타임 제약). 실제 데이터 접근 권한은 각 API
-   라우트가 다시 검증한다(미들웨어는 UX용 리다이렉트일 뿐, 권한의 최종 방어선이 아니다).
+   `SESSION_SECRET`로 서명, 30일 만료)다. 서명/검증은 **`jose`** 라이브러리로 한다 —
+   Node/Edge 양쪽에서 동작하므로 미들웨어(Edge)에서도 쓸 수 있다(`jsonwebtoken`은 Node
+   `crypto`에 의존해 Edge에서 조용히 실패하므로 쓰지 않는다). 서명/검증 함수는 전부 async다.
+   만료되거나 서명이 위조된 토큰은 `verifySessionToken`이 예외 없이 `null`을 반환 — 그 요청은
+   비로그인 취급.
+4. 모든 인증 필요 API는 `await getUserIdFromRequest(request)`로 세션 쿠키를 검증해 `userId`를
+   얻는다. 쿠키가 없거나 무효면 401.
+5. 미들웨어(`src/middleware.ts`, async)가 `/schedule`, `/settings` 접근 시 세션 쿠키의 **서명
+   유효성만** 검사해 리다이렉트한다(DB 조회는 하지 않음 — Edge 런타임 제약). 실제 데이터 접근
+   권한은 각 API 라우트가 다시 검증한다(미들웨어는 UX용 리다이렉트일 뿐, 권한의 최종 방어선이
+   아니다).
 
 ## 인가 모델
 

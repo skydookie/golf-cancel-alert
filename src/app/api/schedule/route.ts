@@ -9,7 +9,7 @@ import { facilityName } from "@/lib/facilities";
 // 로그인한 User의 관심조건에 매칭되는, 지금 신청 가능한 시간대 목록 + 최근 알림 이력을 보여준다.
 // 스케쥴 화면(/schedule)이 그리는 데이터의 출처.
 export async function GET(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const [conditions, bookableStates, recentNotifications] = await Promise.all([

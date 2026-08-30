@@ -5,7 +5,7 @@ import { jsonError } from "@/lib/api-helpers";
 import { watchConditionInputSchema } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const conditions = await prisma.watchCondition.findMany({
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const parsed = watchConditionInputSchema.safeParse(await request.json().catch(() => null));

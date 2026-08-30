@@ -1,5 +1,25 @@
 # engineering-notes.md — 지식
 
+## 세션 JWT는 `jose`로 서명/검증한다 (`jsonwebtoken` 아님)
+
+**증상**: 로그인은 되는데(쿠키 발급) 이후 `/schedule`·`/settings`로 못 들어가고 `/login`으로
+되돌아온다. 로그인 화면이 로그인된 사용자를 `/schedule`로 보내주지도 않는다.
+**원인**: 미들웨어(`src/middleware.ts`)는 Edge Runtime에서 돈다. `jsonwebtoken`은 Node
+`crypto`(`createHmac`)에 의존하는데 Edge에는 없어서 `jwt.verify`가 던지고, `verifySessionToken`
+의 try/catch가 이를 삼켜 항상 `null`(비로그인)로 판정한다. 빌드는 경고만 내고 통과한다.
+**대응**: `src/lib/auth.ts`를 `jose`(Node/Edge 공용)로 교체. `SignJWT`/`jwtVerify`가 async라
+`signSessionToken`·`verifySessionToken`·`getUserIdFromRequest`·`getUserIdFromCookieStore`가
+전부 async가 됐고, 모든 호출부(API 라우트, 미들웨어, `app/page.tsx`)에 `await`를 붙였다.
+**주의**: 이 auth 헬퍼들에 동기 호출을 다시 추가하지 말 것.
+
+## bcryptjs 코스트는 10 (12 아님)
+
+**증상**: Vercel Hobby(제한된 서버리스 CPU)에서 로그인이 2~4초씩 걸린다.
+**원인**: `bcryptjs`는 순수 JS라 네이티브 bcrypt보다 3~5배 느리다. `BCRYPT_ROUNDS=12`면
+`bcrypt.compare` 한 번에 수 초가 든다.
+**대응**: `src/lib/crypto.ts`의 `BCRYPT_ROUNDS`를 10으로 낮췄다(초대제 개인 앱·세션 30일이라
+충분). 기존 round=12 해시는 해시 문자열에 코스트가 박혀 있어 그대로 검증된다.
+
 ## Vitest 설정 파일은 반드시 `.mts` 확장자여야 한다
 
 **증상**: `vitest.config.ts`로 두면 `"vite-tsconfig-paths" resolved to an ESM file. ESM file

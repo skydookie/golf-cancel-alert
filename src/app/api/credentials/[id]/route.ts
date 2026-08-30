@@ -35,7 +35,7 @@ async function loadOwned(id: string, userId: string) {
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const credential = await loadOwned(params.id, userId);
@@ -64,7 +64,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   const credential = await loadOwned(params.id, userId);

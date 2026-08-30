@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     data: { email, passwordHash },
   });
 
-  const token = signSessionToken(user.id);
+  const token = await signSessionToken(user.id);
   const response = NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
   return setSessionCookie(response, token);
 }

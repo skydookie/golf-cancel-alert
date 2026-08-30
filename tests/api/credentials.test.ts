@@ -24,7 +24,7 @@ beforeEach(() => {
 
 async function authedRequest(url: string, init: { method: string; body?: string } = { method: "GET" }) {
   const { signSessionToken } = await import("@/lib/auth");
-  const token = signSessionToken("u1");
+  const token = await signSessionToken("u1");
   return new NextRequest(url, {
     method: init.method,
     body: init.body,

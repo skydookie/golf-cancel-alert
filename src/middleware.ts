@@ -4,9 +4,9 @@ import { getUserIdFromRequest } from "@/lib/auth";
 const PROTECTED_PATHS = ["/schedule", "/settings"];
 const AUTH_PATHS = ["/login", "/signup"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
 
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
   if (isProtected && !userId) {

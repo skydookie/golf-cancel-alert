@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     return jsonError("이메일 또는 비밀번호가 올바르지 않습니다.", 401);
   }
 
-  const token = signSessionToken(user.id);
+  const token = await signSessionToken(user.id);
   const response = NextResponse.json({ id: user.id, email: user.email });
   return setSessionCookie(response, token);
 }

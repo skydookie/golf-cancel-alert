@@ -5,7 +5,10 @@ import crypto from "node:crypto";
 // 앱 자체 로그인 비밀번호는 절대 복원되어서는 안 된다. bcrypt는 검증만 가능하고
 // 원문을 되돌리는 절차 자체가 존재하지 않는다 — 아래 가역 암호화 함수와 혼용 금지.
 
-const BCRYPT_ROUNDS = 12;
+// bcryptjs(순수 JS)는 네이티브 bcrypt보다 3~5배 느리다. Vercel Hobby의 제한된 서버리스
+// CPU에서 rounds=12는 로그인 1회에 2~4초가 걸린다. 초대제 개인 앱(사용자 소수, 세션 30일)
+// 에는 rounds=10이면 충분하다. 기존 rounds=12 해시는 그대로 검증된다(해시에 코스트가 포함됨).
+const BCRYPT_ROUNDS = 10;
 
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, BCRYPT_ROUNDS);

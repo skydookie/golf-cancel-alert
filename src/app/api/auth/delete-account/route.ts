@@ -9,7 +9,7 @@ import { jsonError, clearSessionCookie } from "@/lib/api-helpers";
 // SlotObservationState / NotificationLog / PushSubscription이 DB 차원에서 함께 완전히
 // 삭제된다.
 export async function DELETE(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) return jsonError("로그인이 필요합니다.", 401);
 
   await prisma.user.delete({ where: { id: userId } });
