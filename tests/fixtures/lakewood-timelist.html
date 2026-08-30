@@ -1,0 +1,48 @@
+<!--
+  레이크우드 /reservation/ajax/golfTimeList 응답 조각(발췌).
+  2026-08-30 실사이트에서 관측한 행 구조를 그대로 반영해 재구성한 것이다(전체 raw 캡처는
+  botnhuman 봇 차단에 막혀 확보하지 못함 — docs/tracking/findings.md 참고).
+  관측 사실: <td> 5개(번호/코스/시간/홀/예약), 신청 가능한 행에만
+  <button class="btn btn-res" onclick="golfConfirm('YYYYMMDD','HHMM','courseCd','코스명','HH:MM','18홀',...)">.
+  예약 완료분은 표에 아예 없다. 요금 정보는 노출되지 않음.
+-->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<div class="tbl-group">
+  <div class="tbl demo1">
+    <table summary="전체코스의 코스명, 시간, 홀 정보를 알 수 있고 예약신청을 할 수 있습니다">
+      <caption>예약시간</caption>
+      <thead>
+        <tr>
+          <th scope="col">번호</th>
+          <th scope="col">코스</th>
+          <th scope="col">시간</th>
+          <th scope="col">홀</th>
+          <th scope="col">예약</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>물길</td>
+          <td>06:14</td>
+          <td>18홀</td>
+          <td><button type="button" class="btn btn-res" onclick="golfConfirm('20260901','0614','1','물길','06:14','18홀','0','0','ABLE2','','CBVCD2');"><span>신청</span></button></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>산길</td>
+          <td>06:14</td>
+          <td>18홀</td>
+          <td><button type="button" class="btn btn-res" onclick="golfConfirm('20260901','0614','3','산길','06:14','18홀','0','0','ABLE2','','KTRGSO');"><span>신청</span></button></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>꽃길</td>
+          <td>13:42</td>
+          <td>18홀</td>
+          <td><button type="button" class="btn btn-res" onclick="golfConfirm('20260901','1342','2','꽃길','13:42','18홀','0','0','ABLE2','','KLSS5S');"><span>신청</span></button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

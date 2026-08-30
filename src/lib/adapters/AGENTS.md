@@ -46,6 +46,12 @@
 공유 여부. 이 파일을 수정할 때는 상단 주석의 "확인된 것"/"아직 확인 안 된 것" 구분과
 "⚠️" 경고를 먼저 읽는다.
 
+`lakewood.ts`(레이크우드CC)는 로그인·달력·시간표 방식이 실사이트로 파악됐고
+`parseCalendarDates`/`parseDaySlots`가 테스트된다. 하지만 **`registry.ts`/`facilities.ts`에
+등록하지 않았다** — 사이트에 봇 탐지(botnhuman)가 활성이라 자동 스캔이 차단되기 때문이다
+(조사 중 실제로 차단당함). 활성화는 사용자가 위험을 받아들이고 결정할 사항이다.
+docs/tracking/findings.md의 레이크우드 항목을 먼저 읽는다.
+
 ## 테스트 가이드
 
 - 순수 파싱 함수(`parseCalendarHtml`, `parseDaySlotsHtml`)는 `tests/adapters/`에서

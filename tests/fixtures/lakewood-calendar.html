@@ -1,0 +1,69 @@
+<!--
+  레이크우드 /reservation/ajax/golfCalendar 응답 조각(발췌).
+  2026-08-30 실사이트에서 관측한 구조를 그대로 반영해 재구성한 것이다(전체 raw 캡처는
+  botnhuman 봇 차단에 막혀 확보하지 못함 — docs/tracking/findings.md 참고).
+  관측 사실: 예약 가능일 = <a class="cal_live"> (onclick 상태값 'OPEN'),
+  마감 = cal_end/cal_closed, 오픈전 = class 없음('NOOPEN').
+-->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<ul class="color_info_ul">
+    <li><span class="reserve_live"></span>예약</li>
+    <li><span class="reserve_end"></span>마감</li>
+    <li><span class="reserve_before"></span>오픈전</li>
+</ul>
+<div id="calendar_view_ajax_1">
+    <div class="cm_calender_top">
+        <a class="prev" onclick="workMonthPrev();"><span>이전달</span></a>
+        <span class="date">2026.09</span>
+        <a class="next" onclick="workMonthNext();"><span>다음달</span></a>
+    </div>
+    <table summary="예약일자를 선택할 수 있습니다" class="cm_calender_tbl">
+        <caption>예약 달력</caption>
+        <tbody>
+        <tr>
+            <td class="sat" id="A20260829">
+                <a class="cal_end" onclick="clickCal('sat','A','20260829','CLOSE');" title="마감되었습니다.">
+                    <span>29</span><span class="dayinfor">0팀</span>
+                </a>
+            </td>
+            <td class="hol" id="A20260830">
+                <a class="cal_closed" onclick="clickCal('hol','A','20260830','CLOSE');" title="휴장일입니다.">
+                    <span>30</span><span class="dayinfor">0팀</span>
+                </a>
+            </td>
+            <td id="A20260831">
+                <a class="" onclick="clickCal('','A','20260831','NOOPEN');" title="오픈전입니다.">
+                    <span>31</span><span class="dayinfor">0팀</span>
+                </a>
+            </td>
+        </tr>
+        <tr>
+            <td id="A20260901">
+                <a class="cal_live" onclick="clickCal('','A','20260901','OPEN');" title="예약가능합니다.">
+                    <span>1</span><span class="dayinfor">12팀</span>
+                </a>
+            </td>
+            <td id="A20260902">
+                <a class="cal_live" onclick="clickCal('','A','20260902','OPEN');" title="예약가능합니다.">
+                    <span>2</span><span class="dayinfor">8팀</span>
+                </a>
+            </td>
+            <td id="A20260903">
+                <a class="cal_end" onclick="clickCal('','A','20260903','CLOSE');" title="마감되었습니다.">
+                    <span>3</span><span class="dayinfor">0팀</span>
+                </a>
+            </td>
+            <td class="sat" id="A20260905">
+                <a class="cal_live" onclick="clickCal('sat','A','20260905','OPEN');" title="예약가능합니다.">
+                    <span>5</span><span class="dayinfor">3팀</span>
+                </a>
+            </td>
+            <td id="A20261001">
+                <a class="" onclick="clickCal('','A','20261001','NOOPEN');" title="오픈전입니다.">
+                    <span>1</span><span class="dayinfor">0팀</span>
+                </a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>

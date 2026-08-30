@@ -1,9 +1,19 @@
 # findings.md — 미해결 문제
 
-## 레이크우드(lakewood.co.kr) 어댑터 — 봇 차단 + 로그인 파라미터 미확인 (2026-08-30)
+## 레이크우드(lakewood.co.kr) 어댑터 — 봇 차단이 자동 스캔을 막음 (2026-08-30)
+
+**결론: 어댑터는 구현했으나(`src/lib/adapters/lakewood.ts`) `facilities.ts`/`registry.ts`에
+등록하지 않았다.** 조사 중 반복 fetch가 botnhuman 봇 탐지에 걸려 세션이
+`https://lakewood-cdn.botnhuman.com/macro.html?msg=...(강화된 보안정책... 다시 시도해 주십시오)`
+로 리다이렉트됐다. 5분마다 자동 로그인·스캔하는 엔진에 물리면 곧 차단되고, 회원 계정이
+잠길 위험도 있다. 사용자가 이 위험을 받아들이기로 하면 그때 등록한다.
+
+**로그인은 확정됨**: `POST /member/loginChk`, form 본문 `usrId`·`usrPwd`·
+`returnURL=/reservation/golf` → JSON `{"success":"S",...}` = 성공(실사이트 요청 캡처로 확인).
+coDiv·안티매크로 토큰 불필요. 로그인 실패 응답 형태(success 값)는 미확인.
 
 **상황**: 사용자가 레이크우드CC 추가를 요청. 실사이트 조사 결과:
-- **스캔 경로는 완전히 파악됨**(세션 쿠키만 있으면 raw fetch로 동작 확인):
+- **스캔 경로는 파악됨**(조사 초반에는 세션 쿠키만으로 raw fetch가 동작했으나, 반복하자 차단됨):
   - 달력: `POST /reservation/ajax/golfCalendar` (mainForm serialize, `workMonth=YYYYMM`)
     → HTML. 예약 가능일 = `<a class="cal_live" onclick="clickCal(cls,'A','YYYYMMDD','OPEN')">`.
     마감 = `cal_end`/`cal_closed`, 오픈전 = 클래스 없음/`NOOPEN`.
@@ -12,22 +22,18 @@
     `<button class="btn btn-res" onclick="golfConfirm('YYYYMMDD','HHMM','courseCd','코스명',
     'HH:MM','18홀',...)">신청</button>`. 예약 완료분은 표에 없음. 요금은 행에 안 보임
     (golfConfirm 인자의 그린피가 '0','0'). 코스: 물길·꽃길·산길·숲길.
-- **로그인 경로는 불완전**:
-  - `POST /controller/MemberController.asp` 폼: `method=doLogin`, `coDiv=<globals.coDiv>`,
-    `id`, `pw` → JSON `{resultCode:"0000"}` = 성공. **`coDiv` 값을 못 찾음**(예약 페이지엔
-    `globals`/`mAjax`가 정의 안 됨 — 헤더 로그인 위젯이 있는 페이지에만 있음). 신라CC
-    (sillacc.co.kr)와 공유하는 예약 플랫폼이라 `coDiv`는 골프장 식별 코드로 추정.
-  - **봇 차단 존재**: `lakewood-cdn.botnhuman.com`("bot n human") 비콘 + 예약 mainForm에
-    `macroChk`·`verify_entity_id/ip/unique` 필드. 5분마다 raw fetch 로그인이 감지·차단되거나
-    실제 회원 계정이 잠길 위험이 있다(스캔 읽기는 영향 없어 보임 — 로그인만 노출).
+  코스: 물길·꽃길·산길·숲길. → `parseCalendarDates` / `parseDaySlots`로 구현·테스트됨.
+- **봇 차단**: `lakewood-cdn.botnhuman.com` 비콘 + 예약 mainForm에 `macroChk`·
+  `verify_entity_id/ip/unique` 필드. 조사 중 반복 요청이 실제로 걸려
+  `botnhuman.com/macro.html`로 리다이렉트됐다(위 "결론" 참고).
 
-**대응 방향**:
-- 안전 장치는 이미 있음: `login()` 1회 실패 → `LoginFailedError` → `PAUSED_LOGIN_FAILED`
-  (무한 재시도 없음). 계정 잠김 위험은 이걸로 제한됨.
-- `coDiv`는 사용자가 실사이트에서 로그아웃→로그인하며 개발자도구 Network 탭의
-  `MemberController.asp` 요청 payload를 캡처해주면 확정 가능.
-- 라비에벨 세션 쿠키 수명이 길면 재로그인이 드물어 봇 감지 노출도 줄어든다 — 레이크우드도
-  세션 수명 확인 필요(현재 엔진은 매 스캔 사이클마다 로그인).
+**대응 방향 / 남은 선택지**:
+- 안전 장치: `login()` 1회 실패 → `LoginFailedError` → `PAUSED_LOGIN_FAILED`(무한 재시도
+  없음). 봇 차단 페이지는 JSON이 아니므로 현재 `login()`은 이를 `TransientSiteError`로 처리
+  (계정 안 잠금, 다음 사이클 재시도) — 반복 차단이면 계정 노출이 계속되니 이 동작을 재검토할 것.
+- 활성화하려면: (a) 스캔 주기를 크게 늘려 봇 감지 회피(취소표를 놓칠 확률↑), (b) 세션 쿠키
+  수명이 길면 재로그인을 줄이도록 엔진에 세션 캐시 추가, (c) 로그인 실패 응답(success 값)을
+  실사이트로 확인. 셋 다 사용자 결정·추가 작업 필요.
 
 ## GitHub Actions cron이 비공개 저장소 무료 한도를 초과함 (2026-08-30)
 

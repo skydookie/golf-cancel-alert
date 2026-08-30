@@ -11,6 +11,10 @@ export const FACILITIES: FacilityMeta[] = [
   // 듄스코스는 올드코스와 경로 접두사(/dunescourse)만 다르고 로그인·달력·시간표 구조가 완전히
   // 동일하다(2026-08-30 실사이트 확인) — 같은 어댑터 구현을 코스 설정만 바꿔 재사용한다.
   { id: "laviebelle-dunes", name: "라비에벨 듄스코스" },
+  // 레이크우드CC(어댑터: src/lib/adapters/lakewood.ts)는 구현돼 있으나 여기 등록하지 않았다 —
+  // 봇 탐지(botnhuman)가 활성이라 자동 스캔이 차단되고 회원 계정 잠김 위험이 있다.
+  // 사용자가 위험을 받아들이면 { id: "lakewood", name: "레이크우드CC" }를 추가하고
+  // registry.ts에도 등록한다. (docs/tracking/findings.md 참고)
 ];
 
 export const FACILITY_IDS = FACILITIES.map((f) => f.id);
